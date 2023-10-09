@@ -86,6 +86,22 @@ namespace dxvk {
     void STDMETHODCALLTYPE GetFrameStatistics(
             DXGI_VK_FRAME_STATISTICS* pFrameStatistics);
 
+    VkResult SetLatencySleepMode(
+            bool lowLatencyMode,
+            bool lowLatencyBoost,
+            uint32_t minimumIntervalUs);
+
+    VkResult LatencySleep();
+
+    void SetLatencyMarker(
+            VkLatencyMarkerNV marker,
+            uint64_t presentId);
+
+    VkResult GetLatencyTimings(
+            std::vector<VkLatencyTimingsFrameReportNV>& frameReports);
+
+    bool LowLatencyEnabled();
+
   private:
 
     enum BindingIds : uint32_t {
