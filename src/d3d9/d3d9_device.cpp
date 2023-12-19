@@ -2615,7 +2615,22 @@ namespace dxvk {
     if (unlikely(!PrimitiveCount))
       return S_OK;
 
-    PrepareDraw(PrimitiveType, true);
+    bool dynamicSysmemVBOs = true;
+    for (uint32_t i = 0; i < caps::MaxStreams && dynamicSysmemVBOs; i++) {
+      auto* vbo = GetCommonBuffer(m_state.vertexBuffers[i].vertexBuffer);
+      dynamicSysmemVBOs &= vbo == nullptr || vbo->IsSysmemDynamic();
+    }
+
+    PrepareDraw(PrimitiveType, !dynamicSysmemVBOs, false);
+
+    if (unlikely(dynamicSysmemVBOs)) {
+      // If this draw only uses D3DPOOL_SYSTEMMEM + D3DUSAGE_DYNAMIC buffers,
+      // we only upload the bits of data that this specific draw actually uses.
+      // Similar to DrawPrimitiveUp
+      uint32_t vertexCount = GetVertexCount(PrimitiveType, PrimitiveCount);
+      UploadDynamicSysmemBuffers(StartVertex, vertexCount, 0, 0);
+      StartVertex = 0;
+    }
 
     EmitCs([this,
       cPrimType    = PrimitiveType,
@@ -2652,7 +2667,34 @@ namespace dxvk {
     if (unlikely(!PrimitiveCount))
       return S_OK;
 
-    PrepareDraw(PrimitiveType, true);
+    bool dynamicSysmemVBOs = true;
+    for (uint32_t i = 0; i < caps::MaxStreams && dynamicSysmemVBOs; i++) {
+      auto* vbo = GetCommonBuffer(m_state.vertexBuffers[i].vertexBuffer);
+      dynamicSysmemVBOs &= vbo == nullptr || vbo->IsSysmemDynamic();
+    }
+    D3D9CommonBuffer* ibo = GetCommonBuffer(m_state.indices);
+    bool dynamicSysmemIBO = ibo->IsSysmemDynamic();
+
+    PrepareDraw(PrimitiveType, !dynamicSysmemVBOs, !dynamicSysmemIBO);
+
+    if (unlikely(dynamicSysmemVBOs || dynamicSysmemVBOs)) {
+      uint32_t vertexCount = GetVertexCount(PrimitiveType, PrimitiveCount);
+      UploadDynamicSysmemBuffers(
+        BaseVertexIndex + MinVertexIndex,
+        dynamicSysmemVBOs ? NumVertices : 0,
+        StartIndex,
+        dynamicSysmemIBO ? vertexCount : 0
+      );
+      if (dynamicSysmemVBOs) {
+          // If this draw only uses D3DPOOL_SYSTEMMEM + D3DUSAGE_DYNAMIC buffers,
+          // we only upload the bits of data that this specific draw actually uses.
+          // Similar to DrawPrimitiveUp
+          BaseVertexIndex = -MinVertexIndex;
+      }
+      if (dynamicSysmemIBO) {
+          StartIndex = 0;
+      }
+    }
 
     EmitCs([this,
       cPrimType        = PrimitiveType,
@@ -2688,7 +2730,7 @@ namespace dxvk {
     if (unlikely(!PrimitiveCount))
       return S_OK;
 
-    PrepareDraw(PrimitiveType, false);
+    PrepareDraw(PrimitiveType, false, false);
 
     uint32_t vertexCount = GetVertexCount(PrimitiveType, PrimitiveCount);
 
@@ -2740,7 +2782,7 @@ namespace dxvk {
     if (unlikely(!PrimitiveCount))
       return S_OK;
 
-    PrepareDraw(PrimitiveType, false);
+    PrepareDraw(PrimitiveType, false, false);
 
     uint32_t vertexCount = GetVertexCount(PrimitiveType, PrimitiveCount);
 
@@ -2827,7 +2869,7 @@ namespace dxvk {
     D3D9CommonBuffer* dst  = static_cast<D3D9VertexBuffer*>(pDestBuffer)->GetCommonBuffer();
     D3D9VertexDecl*   decl = static_cast<D3D9VertexDecl*>  (pVertexDecl);
 
-    PrepareDraw(D3DPT_FORCE_DWORD, true);
+    PrepareDraw(D3DPT_FORCE_DWORD, true, true);
 
     if (decl == nullptr) {
       DWORD FVF = dst->Desc()->FVF;
@@ -2842,7 +2884,7 @@ namespace dxvk {
         decl = iter->second.ptr();
     }
 
-    uint32_t offset = DestIndex * decl->GetSize();
+    uint32_t offset = DestIndex * decl->GetSize(0);
 
     auto slice = dst->GetBufferSlice<D3D9_COMMON_BUFFER_TYPE_REAL>();
          slice = slice.subSlice(offset, slice.length() - offset);
@@ -2889,7 +2931,7 @@ namespace dxvk {
     }
 
     if (dst->GetMapMode() == D3D9_COMMON_BUFFER_MAP_MODE_BUFFER) {
-      uint32_t copySize = VertexCount * decl->GetSize();
+      uint32_t copySize = VertexCount * decl->GetSize(0);
 
       EmitCs([
         cSrcBuffer = dst->GetBuffer<D3D9_COMMON_BUFFER_TYPE_REAL>(),
@@ -5091,6 +5133,124 @@ namespace dxvk {
     return D3D_OK;
   }
 
+  
+
+  void D3D9DeviceEx::UploadDynamicSysmemBuffers(
+          UINT                    FirstVertexIndex,
+          UINT                    NumVertices,
+          UINT                    FirstIndex,
+          UINT                    NumIndices
+  ) {
+    // The UP buffer allocator will invalidate,
+    // so we can only use 1 UP buffer slice per draw.
+    // First we calculate the size of that UP buffer slice
+    // and store all sizes and offsets into it.
+
+    uint32_t upBufferSize = 0;
+    std::array<uint32_t, caps::MaxStreams> vboUPBufferOffsets;
+    std::array<uint32_t, caps::MaxStreams> vboUPBufferSizes;
+    for (uint32_t i = 0; i < caps::MaxStreams && NumVertices != 0; i++) {
+      vboUPBufferOffsets[i] = upBufferSize;
+
+      auto* vbo = GetCommonBuffer(m_state.vertexBuffers[i].vertexBuffer);
+      if (likely(vbo == nullptr)) {
+        vboUPBufferSizes[i] = 0;
+        continue;
+      }
+      const uint32_t vertexStride = m_state.vertexDecl->GetSize(i);
+      uint32_t offset = FirstVertexIndex * vertexStride;
+      const uint32_t vertexBufferSize = vbo->Desc()->Size;
+      if (offset < vertexBufferSize) {
+        const uint32_t vertexDataSize = std::min(NumVertices * vertexStride, vertexBufferSize - offset);
+        vboUPBufferSizes[i] = vertexDataSize;
+        upBufferSize += vertexDataSize;
+      }
+    }
+
+    uint32_t iboUPBufferSize = 0;
+    uint32_t iboUPBufferOffset = 0;
+    if (NumIndices != 0) {      
+      auto* ibo = GetCommonBuffer(m_state.indices);
+      if (likely(ibo != nullptr)) {
+        uint32_t indexStride = ibo->Desc()->Format == D3D9Format::INDEX16 ? 2 : 4;
+        VkIndexType indexType = DecodeIndexType(ibo->Desc()->Format);
+        uint32_t offset = indexStride * FirstIndex;
+        uint32_t indexBufferSize = ibo->Desc()->Size;
+        if (offset < indexBufferSize) {
+          iboUPBufferSize = std::min(NumIndices * indexStride, indexBufferSize - offset);
+          iboUPBufferOffset = upBufferSize;
+          upBufferSize += iboUPBufferSize;
+        }
+      }
+    }
+
+    if (upBufferSize == 0) {
+      return;
+    }
+
+    auto upSlice = AllocUPBuffer(upBufferSize);
+
+    // Now copy the actual data and bind it.
+    for (uint32_t i = 0; i < caps::MaxStreams && NumVertices != 0; i++) {
+      if (unlikely(vboUPBufferSizes[i] == 0)) {
+        EmitCs([
+          cStream = i
+        ](DxvkContext* ctx) {
+          ctx->bindVertexBuffer(cStream, DxvkBufferSlice(), 0);
+        });
+        m_flags.set(D3D9DeviceFlag::DirtyVertexBuffers);
+        continue;
+      }
+
+      auto* vbo = GetCommonBuffer(m_state.vertexBuffers[i].vertexBuffer);
+
+      const uint32_t vertexStride = m_state.vertexDecl->GetSize(i);
+      uint32_t offset = FirstVertexIndex * vertexStride;
+
+      uint8_t* data = reinterpret_cast<uint8_t*>(upSlice.mapPtr) + vboUPBufferOffsets[i];
+      uint8_t* src = reinterpret_cast<uint8_t*>(vbo->GetMappedSlice().mapPtr) + offset;
+      std::memcpy(data, src, vboUPBufferSizes[i]);
+
+      auto vboSlice = upSlice.slice.subSlice(vboUPBufferOffsets[i], vboUPBufferSizes[i]);
+      EmitCs([
+        cStream      = i,
+        cBufferSlice = std::move(vboSlice),
+        cStride      = vertexStride
+      ](DxvkContext* ctx) mutable {
+        ctx->bindVertexBuffer(cStream, std::move(cBufferSlice), cStride);
+      });
+      m_flags.set(D3D9DeviceFlag::DirtyVertexBuffers);
+    }
+
+    if (NumIndices != 0) {
+      if (unlikely(iboUPBufferSize == 0)) {
+        EmitCs([
+          cIndexType = VK_INDEX_TYPE_UINT32
+        ](DxvkContext* ctx) {
+          ctx->bindIndexBuffer(DxvkBufferSlice(), cIndexType);
+        });
+        m_flags.set(D3D9DeviceFlag::DirtyIndexBuffer);
+      } else {
+        auto* ibo = GetCommonBuffer(m_state.indices);
+        uint32_t indexStride = ibo->Desc()->Format == D3D9Format::INDEX16 ? 2 : 4;
+        VkIndexType indexType = DecodeIndexType(ibo->Desc()->Format);
+        uint32_t offset = indexStride * FirstIndex;
+        uint8_t* data = reinterpret_cast<uint8_t*>(upSlice.mapPtr) + iboUPBufferOffset;
+        uint8_t* src = reinterpret_cast<uint8_t*>(ibo->GetMappedSlice().mapPtr) + offset;
+        std::memcpy(data, src, iboUPBufferSize);
+        
+        auto iboSlice = upSlice.slice.subSlice(iboUPBufferOffset, iboUPBufferSize);
+        EmitCs([
+          cBufferSlice = std::move(iboSlice),
+          cIndexType = indexType
+        ](DxvkContext* ctx) mutable {
+          ctx->bindIndexBuffer(std::move(cBufferSlice), cIndexType);
+        });
+        m_flags.set(D3D9DeviceFlag::DirtyIndexBuffer);
+      }
+    }
+  }
+
 
   void D3D9DeviceEx::EmitCsChunk(DxvkCsChunkRef&& chunk) {
     m_csSeqNum = m_csThread.dispatchChunk(std::move(chunk));
@@ -6454,7 +6614,7 @@ namespace dxvk {
   }
 
 
-  void D3D9DeviceEx::PrepareDraw(D3DPRIMITIVETYPE PrimitiveType, bool UploadBuffers) {
+  void D3D9DeviceEx::PrepareDraw(D3DPRIMITIVETYPE PrimitiveType, bool UploadVBOs, bool UploadIBO) {
     if (unlikely(m_activeHazardsRT != 0 || m_activeHazardsDS != 0))
       MarkRenderHazards();
 
@@ -6467,7 +6627,7 @@ namespace dxvk {
 
     for (uint32_t i = 0; i < caps::MaxStreams; i++) {
       auto* vbo = GetCommonBuffer(m_state.vertexBuffers[i].vertexBuffer);
-      if (vbo != nullptr && vbo->NeedsUpload() && UploadBuffers)
+      if (vbo != nullptr && vbo->NeedsUpload() && UploadVBOs)
         FlushBuffer(vbo);
     }
 
@@ -6483,7 +6643,7 @@ namespace dxvk {
       GenerateTextureMips(texturesToGen);
 
     auto* ibo = GetCommonBuffer(m_state.indices);
-    if (ibo != nullptr && ibo->NeedsUpload() && UploadBuffers)
+    if (ibo != nullptr && ibo->NeedsUpload() && UploadIBO)
       FlushBuffer(ibo);
 
     UpdateFog();
@@ -6616,6 +6776,19 @@ namespace dxvk {
     }
 
     BindSpecConstants();
+
+    if (unlikely(m_flags.test(D3D9DeviceFlag::DirtyVertexBuffers) && UploadVBOs)) {
+      for (uint32_t i = 0; i < caps::MaxStreams; i++) {
+        const D3D9VBO& vbo = m_state.vertexBuffers[i];
+        BindVertexBuffer(i, vbo.vertexBuffer.ptr(), vbo.offset, vbo.stride);
+      }
+      m_flags.clr(D3D9DeviceFlag::DirtyVertexBuffers);
+    }
+
+    if (unlikely(m_flags.test(D3D9DeviceFlag::DirtyIndexBuffer) && UploadIBO)) {
+      BindIndices();
+      m_flags.clr(D3D9DeviceFlag::DirtyIndexBuffer);
+    }
   }
 
 
