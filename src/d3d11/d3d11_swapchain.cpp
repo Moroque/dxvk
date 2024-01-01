@@ -351,6 +351,34 @@ namespace dxvk {
     *pFrameStatistics = m_frameStatistics;
   }
 
+  VkResult D3D11SwapChain::SetLatencySleepMode(
+          bool lowLatencyMode,
+          bool lowLatencyBoost,
+          uint32_t minimumIntervalUs) {
+    if (lowLatencyMode && !LowLatencyEnabled()) {
+      RecreateSwapChain();
+    }
+    return m_presenter->setLatencySleepMode(lowLatencyMode, lowLatencyBoost, minimumIntervalUs);
+  }
+
+  VkResult D3D11SwapChain::LatencySleep() {
+    return m_presenter->latencySleep();
+  }
+
+  void D3D11SwapChain::SetLatencyMarker(
+          VkLatencyMarkerNV marker,
+          uint64_t presentId) {
+    m_presenter->setLatencyMarker(marker, presentId);
+  }
+
+  VkResult D3D11SwapChain::GetLatencyTimings(
+          std::vector<VkLatencyTimingsFrameReportNV>& frameReports) {
+    return m_presenter->getLatencyTimings(frameReports);
+  }
+
+  bool D3D11SwapChain::LowLatencyEnabled() {
+    return m_presenter->lowLatencyEnabled();
+  }
 
   HRESULT D3D11SwapChain::PresentImage(UINT SyncInterval) {
     // Flush pending rendering commands before
@@ -410,9 +438,11 @@ namespace dxvk {
           uint32_t                Repeat) {
     auto lock = pContext->LockContext();
 
-    // Bump frame ID as necessary
-    if (!Repeat)
-      m_frameId += 1;
+    if (!Repeat) {
+      m_frameId = (m_presenter->lowLatencyEnabled() && m_device->getLatencyMarkers().present) ?
+        m_device->getLatencyMarkers().present :
+        m_frameId + 1;
+    }
 
     // Present from CS thread so that we don't
     // have to synchronize with it first.
