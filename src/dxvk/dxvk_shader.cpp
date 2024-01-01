@@ -42,6 +42,44 @@ namespace dxvk {
     return hash;
   }
 
+  void DxvkShader::gatherBindingOffsets(
+          SpirvCodeBuffer&             code,
+          std::vector<BindingOffsets>& offsets) {
+    // Run an analysis pass over the SPIR-V code to gather some
+    // info that we may need during pipeline compilation.
+    std::vector<BindingOffsets> bindingOffsets;
+    std::vector<uint32_t> varIds;
+
+    for (const auto& ins : code) {
+      if (ins.opCode() == spv::OpDecorate) {
+        if (ins.arg(2) == spv::DecorationBinding) {
+          uint32_t varId = ins.arg(1);
+          bindingOffsets.resize(std::max(bindingOffsets.size(), size_t(varId + 1)));
+          bindingOffsets[varId].bindingId = ins.arg(3);
+          bindingOffsets[varId].bindingOffset = ins.offset() + 3;
+          varIds.push_back(varId);
+        }
+
+        if (ins.arg(2) == spv::DecorationDescriptorSet) {
+          uint32_t varId = ins.arg(1);
+          bindingOffsets.resize(std::max(bindingOffsets.size(), size_t(varId + 1)));
+          bindingOffsets[varId].setOffset = ins.offset() + 3;
+        }
+      }
+
+      // Ignore the actual shader code, there's nothing interesting for us in there.
+      if (ins.opCode() == spv::OpFunction)
+        break;
+    }
+
+    // Combine spec constant IDs with other binding info
+    for (auto varId : varIds) {
+      BindingOffsets info = bindingOffsets[varId];
+
+      if (info.bindingOffset)
+        offsets.push_back(info);
+    }
+  }
 
   DxvkShader::DxvkShader(
     const DxvkShaderCreateInfo&   info,
@@ -78,20 +116,10 @@ namespace dxvk {
     std::vector<BindingOffsets> bindingOffsets;
     std::vector<uint32_t> varIds;
     std::vector<uint32_t> sampleMaskIds;
-
     SpirvCodeBuffer code = std::move(spirv);
-    uint32_t o1VarId = 0;
     
     for (auto ins : code) {
       if (ins.opCode() == spv::OpDecorate) {
-        if (ins.arg(2) == spv::DecorationBinding) {
-          uint32_t varId = ins.arg(1);
-          bindingOffsets.resize(std::max(bindingOffsets.size(), size_t(varId + 1)));
-          bindingOffsets[varId].bindingId = ins.arg(3);
-          bindingOffsets[varId].bindingOffset = ins.offset() + 3;
-          varIds.push_back(varId);
-        }
-
         if (ins.arg(2) == spv::DecorationBuiltIn) {
           if (ins.arg(3) == spv::BuiltInSampleMask)
             sampleMaskIds.push_back(ins.arg(1));
@@ -99,24 +127,10 @@ namespace dxvk {
             m_flags.set(DxvkShaderFlag::ExportsPosition);
         }
 
-        if (ins.arg(2) == spv::DecorationDescriptorSet) {
-          uint32_t varId = ins.arg(1);
-          bindingOffsets.resize(std::max(bindingOffsets.size(), size_t(varId + 1)));
-          bindingOffsets[varId].setOffset = ins.offset() + 3;
-        }
-
         if (ins.arg(2) == spv::DecorationSpecId) {
           if (ins.arg(3) <= MaxNumSpecConstants)
             m_specConstantMask |= 1u << ins.arg(3);
         }
-
-        if (ins.arg(2) == spv::DecorationLocation && ins.arg(3) == 1) {
-          m_o1LocOffset = ins.offset() + 3;
-          o1VarId = ins.arg(1);
-        }
-        
-        if (ins.arg(2) == spv::DecorationIndex && ins.arg(1) == o1VarId)
-          m_o1IdxOffset = ins.offset() + 3;
       }
 
       if (ins.opCode() == spv::OpMemberDecorate) {
@@ -161,19 +175,49 @@ namespace dxvk {
         break;
     }
 
-    // Combine spec constant IDs with other binding info
-    for (auto varId : varIds) {
-      BindingOffsets info = bindingOffsets[varId];
+    // Don't set pipeline library flag if the shader
+    // doesn't actually support pipeline libraries
+    m_needsLibraryCompile = canUsePipelineLibrary(true);
+  }
 
-      if (info.bindingOffset)
-        m_bindingOffsets.push_back(info);
+  DxvkShader::DxvkShader(
+      const DxvkShaderCreateInfo& info,
+      const SpirvModule&          spirv)
+  : m_info                (info),
+    m_code                (spirv.compile()),
+    m_flags               (spirv.getShaderFlags()),
+    m_specConstantMask    (spirv.getSpecConstantMask()),
+    m_bindings            (info.stage) {
+    m_info.uniformData = nullptr;
+    m_info.bindings = nullptr;
+
+    // Copy resource binding slot infos
+    for (uint32_t i = 0; i < info.bindingCount; i++) {
+      DxvkBindingInfo binding = info.bindings[i];
+      binding.stage = info.stage;
+      m_bindings.addBinding(binding);
+    }
+
+    if (info.pushConstSize) {
+      VkPushConstantRange pushConst;
+      pushConst.stageFlags = info.stage;
+      pushConst.offset = info.pushConstOffset;
+      pushConst.size = info.pushConstSize;
+
+      m_bindings.addPushConstantRange(pushConst);
+    }
+
+    // Copy uniform buffer data
+    if (info.uniformSize) {
+      m_uniformData.resize(info.uniformSize);
+      std::memcpy(m_uniformData.data(), info.uniformData, info.uniformSize);
+      m_info.uniformData = m_uniformData.data();
     }
 
     // Don't set pipeline library flag if the shader
     // doesn't actually support pipeline libraries
     m_needsLibraryCompile = canUsePipelineLibrary(true);
   }
-
 
   DxvkShader::~DxvkShader() {
     
@@ -185,9 +229,12 @@ namespace dxvk {
     const DxvkShaderModuleCreateInfo& state) const {
     SpirvCodeBuffer spirvCode = m_code.decompress();
     uint32_t* code = spirvCode.data();
-    
+    std::vector<BindingOffsets> bindingOffsets;
+
+    gatherBindingOffsets(spirvCode, bindingOffsets);
+
     // Remap resource binding IDs
-    for (const auto& info : m_bindingOffsets) {
+    for (const auto& info : bindingOffsets) {
       auto mappedBinding = layout->lookupBinding(m_info.stage, info.bindingId);
 
       if (mappedBinding) {
@@ -200,8 +247,30 @@ namespace dxvk {
 
     // For dual-source blending we need to re-map
     // location 1, index 0 to location 0, index 1
-    if (state.fsDualSrcBlend && m_o1IdxOffset && m_o1LocOffset)
-      std::swap(code[m_o1IdxOffset], code[m_o1LocOffset]);
+    if (state.fsDualSrcBlend) {
+      uint32_t o1VarId = 0;
+      uint32_t o1IdxOffset = 0;
+      uint32_t o1LocOffset = 0;
+
+      for (auto ins : spirvCode) {
+        if (ins.opCode() == spv::OpDecorate) {
+          if (ins.arg(2) == spv::DecorationLocation && ins.arg(3) == 1) {
+            o1LocOffset = ins.offset() + 3;
+            o1VarId = ins.arg(1);
+          }
+
+          if (ins.arg(2) == spv::DecorationIndex && ins.arg(1) == o1VarId)
+            o1IdxOffset = ins.offset() + 3;
+        }
+
+        // Ignore the actual shader code, there's nothing interesting for us in there.
+        if (ins.opCode() == spv::OpFunction)
+          break;
+      }
+
+      if (o1IdxOffset && o1LocOffset)
+        std::swap(code[o1IdxOffset], code[o1LocOffset]);
+    }
     
     // Replace undefined input variables with zero
     for (uint32_t u : bit::BitMask(state.undefinedInputs))
@@ -440,8 +509,9 @@ namespace dxvk {
         if (numWords) {
           code.beginInsertion(ins.offset());
           code.erase(numWords);
+          code.endInsertion();
 
-          iter = SpirvInstructionIterator(code.data(), code.endInsertion(), code.dwords());
+          iter = SpirvInstructionIterator(code.data(), ins.offset(), code.dwords());
         }
       }
 
