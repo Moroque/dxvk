@@ -65,9 +65,11 @@ namespace dxvk {
     VkPhysicalDeviceVertexAttributeDivisorFeaturesEXT         extVertexAttributeDivisor;
     VkBool32                                                  khrExternalMemoryWin32;
     VkBool32                                                  khrExternalSemaphoreWin32;
+	VkPhysicalDevicePageableDeviceLocalMemoryFeaturesEXT      extPageableDeviceLocalMemory;
     VkPhysicalDeviceMaintenance5FeaturesKHR                   khrMaintenance5;
     VkPhysicalDevicePresentIdFeaturesKHR                      khrPresentId;
     VkPhysicalDevicePresentWaitFeaturesKHR                    khrPresentWait;
+	VkBool32                                                  nvFillRectangle;
     VkBool32                                                  nvLowLatency2;
     VkBool32                                                  nvxBinaryImport;
     VkBool32                                                  nvxImageViewHandle;

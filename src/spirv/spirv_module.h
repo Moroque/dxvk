@@ -1,6 +1,7 @@
 #pragma once
 
 #include <unordered_set>
+#include <optional>
 
 #include "spirv_code_buffer.h"
 #include "spirv_compression.h"
@@ -15,15 +16,16 @@ namespace dxvk {
    * Provides extra information about the features
    * used by a shader.
    */
-  enum DxvkShaderFlag : uint64_t {
-    HasSampleRateShading,
-    HasTransformFeedback,
-    ExportsPosition,
-    ExportsStencilRef,
-    ExportsViewportIndexLayerFromVertexStage,
-    UsesFragmentCoverage,
-    UsesSparseResidency,
-  };
+    enum DxvkShaderFlag : uint64_t {
+        HasSampleRateShading,
+        HasTransformFeedback,
+        ExportsPosition,
+        ExportsStencilRef,
+        ExportsViewportIndexLayerFromVertexStage,
+        ExportsSampleMask,
+        UsesFragmentCoverage,
+        UsesSparseResidency,
+    };
 
   using DxvkShaderFlags = Flags<DxvkShaderFlag>;
 

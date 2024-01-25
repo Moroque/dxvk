@@ -418,6 +418,9 @@ namespace dxvk {
 
     if (useMemoryPriority)
       priorityInfo.pNext = std::exchange(memoryInfo.pNext, &priorityInfo);
+	
+	if (result.memHandle)
+        vk->vkSetDeviceMemoryPriorityEXT(vk->device(), result.memHandle, priorityInfo.priority);
 
     if (vk->vkAllocateMemory(vk->device(), &memoryInfo, nullptr, &result.memHandle))
       return DxvkDeviceMemory();

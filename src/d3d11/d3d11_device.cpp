@@ -1855,7 +1855,8 @@ namespace dxvk {
       return D3D_FEATURE_LEVEL();
 
     // The feature level override always takes precedence
-    static const std::array<std::pair<std::string, D3D_FEATURE_LEVEL>, 9> s_featureLevels = {{
+    static const std::array<std::pair<std::string, D3D_FEATURE_LEVEL>, 10> s_featureLevels = {{
+      { "12_2", D3D_FEATURE_LEVEL_12_2 },
       { "12_1", D3D_FEATURE_LEVEL_12_1 },
       { "12_0", D3D_FEATURE_LEVEL_12_0 },
       { "11_1", D3D_FEATURE_LEVEL_11_1 },
@@ -1864,7 +1865,7 @@ namespace dxvk {
       { "10_0", D3D_FEATURE_LEVEL_10_0 },
       { "9_3",  D3D_FEATURE_LEVEL_9_3  },
       { "9_2",  D3D_FEATURE_LEVEL_9_2  },
-      { "9_1",  D3D_FEATURE_LEVEL_9_1  },
+      { "9_1",  D3D_FEATURE_LEVEL_9_1  }
     }};
     
     std::string maxLevel = Instance->config().getOption<std::string>("d3d11.maxFeatureLevel");

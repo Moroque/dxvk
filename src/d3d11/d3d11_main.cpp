@@ -53,10 +53,12 @@ extern "C" {
     
     // Feature levels to probe if the
     // application does not specify any.
-    std::array<D3D_FEATURE_LEVEL, 6> defaultFeatureLevels = {
-      D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_1,
-      D3D_FEATURE_LEVEL_10_0, D3D_FEATURE_LEVEL_9_3,
-      D3D_FEATURE_LEVEL_9_2,  D3D_FEATURE_LEVEL_9_1,
+    std::array<D3D_FEATURE_LEVEL, 9> defaultFeatureLevels = {
+      D3D_FEATURE_LEVEL_12_1, D3D_FEATURE_LEVEL_12_0,
+      D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_11_1,
+      D3D_FEATURE_LEVEL_10_1, D3D_FEATURE_LEVEL_10_0, 
+      D3D_FEATURE_LEVEL_9_3,
+      D3D_FEATURE_LEVEL_9_2,  D3D_FEATURE_LEVEL_9_1
     };
     
     if (!pFeatureLevels || !FeatureLevels) {
@@ -323,7 +325,7 @@ extern "C" {
     // Determine feature level for the D3D11 device
     std::array<D3D_FEATURE_LEVEL, 4> defaultFeatureLevels = {{
       D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_11_1,
-      D3D_FEATURE_LEVEL_12_0, D3D_FEATURE_LEVEL_12_1,
+      D3D_FEATURE_LEVEL_12_0, D3D_FEATURE_LEVEL_12_1
     }};
 
     D3D12_FEATURE_DATA_FEATURE_LEVELS featureLevel = { };

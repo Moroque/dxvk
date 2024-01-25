@@ -17,26 +17,7 @@ namespace dxvk {
   class DxvkShaderModule;
   class DxvkPipelineManager;
   struct DxvkPipelineStats;
-  
-  /**
-   * \brief Shader flags
-   *
-   * Provides extra information about the features
-   * used by a shader.
-   */
-  enum DxvkShaderFlag : uint64_t {
-    HasSampleRateShading,
-    HasTransformFeedback,
-    ExportsPosition,
-    ExportsStencilRef,
-    ExportsViewportIndexLayerFromVertexStage,
-    ExportsSampleMask,
-    UsesFragmentCoverage,
-    UsesSparseResidency,
-  };
 
-  using DxvkShaderFlags = Flags<DxvkShaderFlag>;
-  
   /**
    * \brief Shader info
    */

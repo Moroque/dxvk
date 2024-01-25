@@ -252,6 +252,7 @@ namespace dxvk {
         && CHECK_FEATURE_NEED(extMemoryBudget)
         && CHECK_FEATURE_NEED(extMemoryPriority.memoryPriority)
         && CHECK_FEATURE_NEED(extNonSeamlessCubeMap.nonSeamlessCubeMap)
+		&& CHECK_FEATURE_NEED(extPageableDeviceLocalMemory.pageableDeviceLocalMemory)
         && CHECK_FEATURE_NEED(extRobustness2.robustBufferAccess2)
         && CHECK_FEATURE_NEED(extRobustness2.robustImageAccess2)
         && CHECK_FEATURE_NEED(extRobustness2.nullDescriptor)
@@ -381,6 +382,9 @@ namespace dxvk {
     // Enable memory priority if supported to improve memory management
     enabledFeatures.extMemoryPriority.memoryPriority =
       m_deviceFeatures.extMemoryPriority.memoryPriority;
+	  
+	  enabledFeatures.extPageableDeviceLocalMemory =
+        m_deviceFeatures.extPageableDeviceLocalMemory;
 
     // Require robustBufferAccess2 since we use the robustness alignment
     // info in a number of places, and require null descriptor support
@@ -594,6 +598,10 @@ namespace dxvk {
           enabledFeatures.extVertexAttributeDivisor = *reinterpret_cast<const VkPhysicalDeviceVertexAttributeDivisorFeaturesEXT*>(f);
           break;
 
+		case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PAGEABLE_DEVICE_LOCAL_MEMORY_FEATURES_EXT:
+          enabledFeatures.extPageableDeviceLocalMemory = *reinterpret_cast<const VkPhysicalDevicePageableDeviceLocalMemoryFeaturesEXT*>(f);
+          break;
+		  
         case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_5_FEATURES_KHR:
           enabledFeatures.khrMaintenance5 = *reinterpret_cast<const VkPhysicalDeviceMaintenance5FeaturesKHR*>(f);
           break;
@@ -867,6 +875,11 @@ namespace dxvk {
       m_deviceFeatures.extMemoryPriority.pNext = std::exchange(m_deviceFeatures.core.pNext, &m_deviceFeatures.extMemoryPriority);
     }
 
+	if (m_deviceExtensions.supports(VK_EXT_PAGEABLE_DEVICE_LOCAL_MEMORY_EXTENSION_NAME)) {
+      m_deviceFeatures.extPageableDeviceLocalMemory.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PAGEABLE_DEVICE_LOCAL_MEMORY_FEATURES_EXT;
+      m_deviceFeatures.extPageableDeviceLocalMemory.pNext = std::exchange(m_deviceFeatures.core.pNext, &m_deviceFeatures.extPageableDeviceLocalMemory);
+    }
+	
     if (m_deviceExtensions.supports(VK_EXT_NON_SEAMLESS_CUBE_MAP_EXTENSION_NAME)) {
       m_deviceFeatures.extNonSeamlessCubeMap.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_NON_SEAMLESS_CUBE_MAP_FEATURES_EXT;
       m_deviceFeatures.extNonSeamlessCubeMap.pNext = std::exchange(m_deviceFeatures.core.pNext, &m_deviceFeatures.extNonSeamlessCubeMap);
@@ -930,6 +943,9 @@ namespace dxvk {
     if (m_deviceExtensions.supports(VK_NV_LOW_LATENCY_2_EXTENSION_NAME))
       m_deviceFeatures.nvLowLatency2 = VK_TRUE;
 
+	if (m_deviceExtensions.supports(VK_NV_FILL_RECTANGLE_EXTENSION_NAME))
+      m_deviceFeatures.nvFillRectangle = VK_TRUE;
+  
     if (m_deviceExtensions.supports(VK_NVX_BINARY_IMPORT_EXTENSION_NAME))
       m_deviceFeatures.nvxBinaryImport = VK_TRUE;
 
@@ -982,6 +998,7 @@ namespace dxvk {
       &devExtensions.extMemoryBudget,
       &devExtensions.extMemoryPriority,
       &devExtensions.extNonSeamlessCubeMap,
+	  &devExtensions.extPageableDeviceLocalMemory,
       &devExtensions.extRobustness2,
       &devExtensions.extShaderModuleIdentifier,
       &devExtensions.extShaderStencilExport,
@@ -998,6 +1015,7 @@ namespace dxvk {
       &devExtensions.khrSwapchain,
       &devExtensions.khrWin32KeyedMutex,
       &devExtensions.nvLowLatency2,
+	  &devExtensions.nvFillRectangle,
       &devExtensions.nvxBinaryImport,
       &devExtensions.nvxImageViewHandle,
     }};
@@ -1077,6 +1095,11 @@ namespace dxvk {
       enabledFeatures.extMemoryPriority.pNext = std::exchange(enabledFeatures.core.pNext, &enabledFeatures.extMemoryPriority);
     }
 
+	if (devExtensions.extPageableDeviceLocalMemory) {
+        enabledFeatures.extPageableDeviceLocalMemory.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PAGEABLE_DEVICE_LOCAL_MEMORY_FEATURES_EXT;
+        enabledFeatures.extPageableDeviceLocalMemory.pNext = std::exchange(enabledFeatures.core.pNext, &enabledFeatures.extPageableDeviceLocalMemory);
+    }
+	
     if (devExtensions.extNonSeamlessCubeMap) {
       enabledFeatures.extNonSeamlessCubeMap.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_NON_SEAMLESS_CUBE_MAP_FEATURES_EXT;
       enabledFeatures.extNonSeamlessCubeMap.pNext = std::exchange(enabledFeatures.core.pNext, &enabledFeatures.extNonSeamlessCubeMap);
@@ -1137,14 +1160,15 @@ namespace dxvk {
       enabledFeatures.khrPresentWait.pNext = std::exchange(enabledFeatures.core.pNext, &enabledFeatures.khrPresentWait);
     }
 
-    if (devExtensions.nvxBinaryImport) {
+    if (devExtensions.nvxBinaryImport) 
       enabledFeatures.nvxBinaryImport = VK_TRUE;
-    }
 
-    if (devExtensions.nvLowLatency2) {
+    if (devExtensions.nvLowLatency2) 
       enabledFeatures.nvLowLatency2 = VK_TRUE;
-    }
 
+    if (devExtensions.nvFillRectangle)
+      enabledFeatures.nvFillRectangle = VK_TRUE;
+  
     if (devExtensions.nvxImageViewHandle)
       enabledFeatures.nvxImageViewHandle = VK_TRUE;
 
@@ -1256,6 +1280,8 @@ namespace dxvk {
       "\n  extension supported                    : ", features.extMemoryBudget ? "1" : "0",
       "\n", VK_EXT_MEMORY_PRIORITY_EXTENSION_NAME,
       "\n  memoryPriority                         : ", features.extMemoryPriority.memoryPriority ? "1" : "0",
+	  "\n", VK_EXT_PAGEABLE_DEVICE_LOCAL_MEMORY_EXTENSION_NAME,
+      "\n  extension supported                    : ", features.extPageableDeviceLocalMemory.pageableDeviceLocalMemory ? "1" : "0",
       "\n", VK_EXT_NON_SEAMLESS_CUBE_MAP_EXTENSION_NAME,
       "\n  nonSeamlessCubeMap                     : ", features.extNonSeamlessCubeMap.nonSeamlessCubeMap ? "1" : "0",
       "\n", VK_EXT_ROBUSTNESS_2_EXTENSION_NAME,
@@ -1288,6 +1314,8 @@ namespace dxvk {
       "\n  presentId                              : ", features.khrPresentId.presentId ? "1" : "0",
       "\n", VK_KHR_PRESENT_WAIT_EXTENSION_NAME,
       "\n  presentWait                            : ", features.khrPresentWait.presentWait ? "1" : "0",
+	  "\n", VK_NV_FILL_RECTANGLE_EXTENSION_NAME,
+      "\n  extension supported                    : ", features.nvFillRectangle ? "1" : "0",
       "\n", VK_NV_LOW_LATENCY_2_EXTENSION_NAME,
       "\n  extension supported                    : ", features.nvLowLatency2 ? "1" : "0",
       "\n", VK_NVX_BINARY_IMPORT_EXTENSION_NAME,
