@@ -762,9 +762,7 @@ namespace dxvk {
 
 
   VkFullScreenExclusiveEXT D3D11SwapChain::PickFullscreenMode() {
-    return m_desc.Flags & DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH
-      ? VK_FULL_SCREEN_EXCLUSIVE_ALLOWED_EXT
-      : VK_FULL_SCREEN_EXCLUSIVE_DISALLOWED_EXT;
+    return VK_FULL_SCREEN_EXCLUSIVE_DISALLOWED_EXT;
   }
 
 

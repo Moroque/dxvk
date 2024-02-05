@@ -1314,9 +1314,7 @@ namespace dxvk {
 
 
   VkFullScreenExclusiveEXT D3D9SwapChainEx::PickFullscreenMode() {
-    return m_dialog
-      ? VK_FULL_SCREEN_EXCLUSIVE_DISALLOWED_EXT
-      : VK_FULL_SCREEN_EXCLUSIVE_DEFAULT_EXT;
+      return VK_FULL_SCREEN_EXCLUSIVE_DISALLOWED_EXT;
   }
 
 
