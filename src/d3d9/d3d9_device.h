@@ -775,11 +775,14 @@ namespace dxvk {
      * @param NumIndices The number of indices that will be drawn. If this is 0, the index buffer binding will not be modified.
      */
     void UploadDynamicSysmemBuffers(
-            UINT                    FirstVertexIndex,
+            UINT&                   FirstVertexIndex,
             UINT                    NumVertices,
-            UINT                    FirstIndex,
-            UINT                    NumIndices
-    );
+            UINT&                   FirstIndex,
+            UINT                    NumIndices,
+            INT&                    BaseVertexIndex,
+            bool*                   pDynamicVBOs,
+            bool*                   pDynamicIBO);
+    
 
     void SetupFPU();
 

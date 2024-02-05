@@ -2615,22 +2615,21 @@ namespace dxvk {
     if (unlikely(!PrimitiveCount))
       return S_OK;
 
-    bool dynamicSysmemVBOs = true;
-    for (uint32_t i = 0; i < caps::MaxStreams && dynamicSysmemVBOs; i++) {
-      auto* vbo = GetCommonBuffer(m_state.vertexBuffers[i].vertexBuffer);
-      dynamicSysmemVBOs &= vbo == nullptr || vbo->IsSysmemDynamic();
-    }
+    bool dynamicSysmemVBOs;
+    uint32_t firstIndex     = 0;
+    int32_t baseVertexIndex = 0;
+    uint32_t vertexCount    = GetVertexCount(PrimitiveType, PrimitiveCount);
+    UploadDynamicSysmemBuffers(
+      StartVertex,
+      vertexCount,
+      firstIndex,
+      0,
+      baseVertexIndex,
+      &dynamicSysmemVBOs,
+      nullptr
+    );
 
     PrepareDraw(PrimitiveType, !dynamicSysmemVBOs, false);
-
-    if (unlikely(dynamicSysmemVBOs)) {
-      // If this draw only uses D3DPOOL_SYSTEMMEM + D3DUSAGE_DYNAMIC buffers,
-      // we only upload the bits of data that this specific draw actually uses.
-      // Similar to DrawPrimitiveUp
-      uint32_t vertexCount = GetVertexCount(PrimitiveType, PrimitiveCount);
-      UploadDynamicSysmemBuffers(StartVertex, vertexCount, 0, 0);
-      StartVertex = 0;
-    }
 
     EmitCs([this,
       cPrimType    = PrimitiveType,
@@ -2651,7 +2650,6 @@ namespace dxvk {
     return D3D_OK;
   }
 
-
   HRESULT STDMETHODCALLTYPE D3D9DeviceEx::DrawIndexedPrimitive(
           D3DPRIMITIVETYPE PrimitiveType,
           INT              BaseVertexIndex,
@@ -2666,35 +2664,21 @@ namespace dxvk {
 
     if (unlikely(!PrimitiveCount))
       return S_OK;
-
-    bool dynamicSysmemVBOs = true;
-    for (uint32_t i = 0; i < caps::MaxStreams && dynamicSysmemVBOs; i++) {
-      auto* vbo = GetCommonBuffer(m_state.vertexBuffers[i].vertexBuffer);
-      dynamicSysmemVBOs &= vbo == nullptr || vbo->IsSysmemDynamic();
-    }
-    D3D9CommonBuffer* ibo = GetCommonBuffer(m_state.indices);
-    bool dynamicSysmemIBO = ibo->IsSysmemDynamic();
+      
+    bool dynamicSysmemVBOs;
+    bool dynamicSysmemIBO;
+    uint32_t indexCount = GetVertexCount(PrimitiveType, PrimitiveCount);
+    UploadDynamicSysmemBuffers(
+      MinVertexIndex,
+      NumVertices,
+      StartIndex,
+      indexCount,
+      BaseVertexIndex,
+      &dynamicSysmemVBOs,
+      &dynamicSysmemIBO
+    );
 
     PrepareDraw(PrimitiveType, !dynamicSysmemVBOs, !dynamicSysmemIBO);
-
-    if (unlikely(dynamicSysmemVBOs || dynamicSysmemVBOs)) {
-      uint32_t vertexCount = GetVertexCount(PrimitiveType, PrimitiveCount);
-      UploadDynamicSysmemBuffers(
-        BaseVertexIndex + MinVertexIndex,
-        dynamicSysmemVBOs ? NumVertices : 0,
-        StartIndex,
-        dynamicSysmemIBO ? vertexCount : 0
-      );
-      if (dynamicSysmemVBOs) {
-          // If this draw only uses D3DPOOL_SYSTEMMEM + D3DUSAGE_DYNAMIC buffers,
-          // we only upload the bits of data that this specific draw actually uses.
-          // Similar to DrawPrimitiveUp
-          BaseVertexIndex = -MinVertexIndex;
-      }
-      if (dynamicSysmemIBO) {
-          StartIndex = 0;
-      }
-    }
 
     EmitCs([this,
       cPrimType        = PrimitiveType,
@@ -5136,20 +5120,39 @@ namespace dxvk {
   
 
   void D3D9DeviceEx::UploadDynamicSysmemBuffers(
-          UINT                    FirstVertexIndex,
+          UINT&                   FirstVertexIndex,
           UINT                    NumVertices,
-          UINT                    FirstIndex,
-          UINT                    NumIndices
+          UINT&                   FirstIndex,
+          UINT                    NumIndices,
+          INT&                    BaseVertexIndex,
+          bool*                   pDynamicVBOs,
+          bool*                   pDynamicIBO
   ) {
+    bool dynamicSysmemVBOs = true;
+    for (uint32_t i = 0; i < caps::MaxStreams && dynamicSysmemVBOs; i++) {
+      auto* vbo = GetCommonBuffer(m_state.vertexBuffers[i].vertexBuffer);
+      dynamicSysmemVBOs &= vbo == nullptr || vbo->IsSysmemDynamic();
+    }
+    D3D9CommonBuffer* ibo = GetCommonBuffer(m_state.indices);
+    bool dynamicSysmemIBO = NumIndices != 0 && ibo->IsSysmemDynamic();
+
+    *pDynamicVBOs = dynamicSysmemVBOs;
+
+    if (pDynamicIBO)
+      *pDynamicIBO = dynamicSysmemIBO;
+
+    if (likely(!dynamicSysmemVBOs && !dynamicSysmemIBO))
+      return;
+
     // The UP buffer allocator will invalidate,
     // so we can only use 1 UP buffer slice per draw.
     // First we calculate the size of that UP buffer slice
     // and store all sizes and offsets into it.
 
     uint32_t upBufferSize = 0;
-    std::array<uint32_t, caps::MaxStreams> vboUPBufferOffsets;
-    std::array<uint32_t, caps::MaxStreams> vboUPBufferSizes;
-    for (uint32_t i = 0; i < caps::MaxStreams && NumVertices != 0; i++) {
+    std::array<uint32_t, caps::MaxStreams> vboUPBufferOffsets = {};
+    std::array<uint32_t, caps::MaxStreams> vboUPBufferSizes = {};
+    for (uint32_t i = 0; i < caps::MaxStreams && dynamicSysmemVBOs; i++) {
       vboUPBufferOffsets[i] = upBufferSize;
 
       auto* vbo = GetCommonBuffer(m_state.vertexBuffers[i].vertexBuffer);
@@ -5158,7 +5161,7 @@ namespace dxvk {
         continue;
       }
       const uint32_t vertexStride = m_state.vertexDecl->GetSize(i);
-      uint32_t offset = FirstVertexIndex * vertexStride;
+      uint32_t offset = (FirstVertexIndex + BaseVertexIndex) * vertexStride;
       const uint32_t vertexBufferSize = vbo->Desc()->Size;
       if (offset < vertexBufferSize) {
         const uint32_t vertexDataSize = std::min(NumVertices * vertexStride, vertexBufferSize - offset);
@@ -5169,7 +5172,7 @@ namespace dxvk {
 
     uint32_t iboUPBufferSize = 0;
     uint32_t iboUPBufferOffset = 0;
-    if (NumIndices != 0) {      
+    if (dynamicSysmemIBO) {
       auto* ibo = GetCommonBuffer(m_state.indices);
       if (likely(ibo != nullptr)) {
         uint32_t indexStride = ibo->Desc()->Format == D3D9Format::INDEX16 ? 2 : 4;
@@ -5184,50 +5187,61 @@ namespace dxvk {
       }
     }
 
-    if (upBufferSize == 0) {
+    if (unlikely(upBufferSize == 0)) {
+      *pDynamicVBOs = false;
+      if (pDynamicIBO)
+        *pDynamicIBO = false;
+
       return;
     }
 
     auto upSlice = AllocUPBuffer(upBufferSize);
 
     // Now copy the actual data and bind it.
-    for (uint32_t i = 0; i < caps::MaxStreams && NumVertices != 0; i++) {
-      if (unlikely(vboUPBufferSizes[i] == 0)) {
+    if (dynamicSysmemVBOs) {
+      for (uint32_t i = 0; i < caps::MaxStreams; i++) {
+        if (unlikely(vboUPBufferSizes[i] == 0)) {
+          EmitCs([
+            cStream = i
+          ](DxvkContext* ctx) {
+            ctx->bindVertexBuffer(cStream, DxvkBufferSlice(), 0);
+          });
+          m_flags.set(D3D9DeviceFlag::DirtyVertexBuffers);
+          continue;
+        }
+
+        auto* vbo = GetCommonBuffer(m_state.vertexBuffers[i].vertexBuffer);
+
+        const uint32_t vertexStride = m_state.vertexDecl->GetSize(i);
+        uint32_t offset = (BaseVertexIndex + FirstVertexIndex) * vertexStride;
+
+        uint8_t* data = reinterpret_cast<uint8_t*>(upSlice.mapPtr) + vboUPBufferOffsets[i];
+        uint8_t* src = reinterpret_cast<uint8_t*>(vbo->GetMappedSlice().mapPtr) + offset;
+        std::memcpy(data, src, vboUPBufferSizes[i]);
+
+        auto vboSlice = upSlice.slice.subSlice(vboUPBufferOffsets[i], vboUPBufferSizes[i]);
         EmitCs([
-          cStream = i
-        ](DxvkContext* ctx) {
-          ctx->bindVertexBuffer(cStream, DxvkBufferSlice(), 0);
+          cStream      = i,
+          cBufferSlice = std::move(vboSlice),
+          cStride      = vertexStride
+        ](DxvkContext* ctx) mutable {
+          ctx->bindVertexBuffer(cStream, std::move(cBufferSlice), cStride);
         });
         m_flags.set(D3D9DeviceFlag::DirtyVertexBuffers);
-        continue;
       }
 
-      auto* vbo = GetCommonBuffer(m_state.vertexBuffers[i].vertexBuffer);
-
-      const uint32_t vertexStride = m_state.vertexDecl->GetSize(i);
-      uint32_t offset = FirstVertexIndex * vertexStride;
-
-      uint8_t* data = reinterpret_cast<uint8_t*>(upSlice.mapPtr) + vboUPBufferOffsets[i];
-      uint8_t* src = reinterpret_cast<uint8_t*>(vbo->GetMappedSlice().mapPtr) + offset;
-      std::memcpy(data, src, vboUPBufferSizes[i]);
-
-      auto vboSlice = upSlice.slice.subSlice(vboUPBufferOffsets[i], vboUPBufferSizes[i]);
-      EmitCs([
-        cStream      = i,
-        cBufferSlice = std::move(vboSlice),
-        cStride      = vertexStride
-      ](DxvkContext* ctx) mutable {
-        ctx->bindVertexBuffer(cStream, std::move(cBufferSlice), cStride);
-      });
-      m_flags.set(D3D9DeviceFlag::DirtyVertexBuffers);
+      // Change the draw call parameters to reflect the changed vertex buffers
+      if (NumIndices != 0) {
+        BaseVertexIndex = -FirstVertexIndex;
+      } else {
+        FirstVertexIndex = 0;
+      }
     }
 
-    if (NumIndices != 0) {
+    if (dynamicSysmemIBO) {
       if (unlikely(iboUPBufferSize == 0)) {
-        EmitCs([
-          cIndexType = VK_INDEX_TYPE_UINT32
-        ](DxvkContext* ctx) {
-          ctx->bindIndexBuffer(DxvkBufferSlice(), cIndexType);
+        EmitCs([](DxvkContext* ctx) {
+          ctx->bindIndexBuffer(DxvkBufferSlice(), VK_INDEX_TYPE_UINT32);
         });
         m_flags.set(D3D9DeviceFlag::DirtyIndexBuffer);
       } else {
@@ -5248,6 +5262,9 @@ namespace dxvk {
         });
         m_flags.set(D3D9DeviceFlag::DirtyIndexBuffer);
       }
+
+      // Change the draw call parameters to reflect the changed index buffer
+      FirstIndex = 0;
     }
   }
 
