@@ -1037,6 +1037,9 @@ namespace dxvk {
     if (srcTexInfo->Desc()->Format != dstTexInfo->Desc()->Format)
       return D3DERR_INVALIDCALL;
 
+    if (src->GetSurfaceExtent() != dst->GetSurfaceExtent())
+      return D3DERR_INVALIDCALL;
+
     if (dstTexInfo->Desc()->Pool == D3DPOOL_DEFAULT)
       return this->StretchRect(pRenderTarget, nullptr, pDestSurface, nullptr, D3DTEXF_NONE);
 
@@ -5176,7 +5179,6 @@ namespace dxvk {
       auto* ibo = GetCommonBuffer(m_state.indices);
       if (likely(ibo != nullptr)) {
         uint32_t indexStride = ibo->Desc()->Format == D3D9Format::INDEX16 ? 2 : 4;
-        VkIndexType indexType = DecodeIndexType(ibo->Desc()->Format);
         uint32_t offset = indexStride * FirstIndex;
         uint32_t indexBufferSize = ibo->Desc()->Size;
         if (offset < indexBufferSize) {
