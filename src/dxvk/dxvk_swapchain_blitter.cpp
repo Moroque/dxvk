@@ -80,7 +80,7 @@ namespace dxvk {
         DxvkBufferCreateInfo bufInfo;
         bufInfo.size = size;
         bufInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-        bufInfo.stages = VK_PIPELINE_STAGE_TRANSFER_BIT;
+        bufInfo.stages =  VK_PIPELINE_STAGE_2_TRANSFER_BIT;
         bufInfo.access = VK_ACCESS_TRANSFER_READ_BIT;
 
         m_gammaBuffer = m_device->createBuffer(bufInfo,
@@ -247,8 +247,8 @@ namespace dxvk {
         imgInfo.mipLevels   = 1;
         imgInfo.usage       = VK_IMAGE_USAGE_TRANSFER_DST_BIT
                             | VK_IMAGE_USAGE_SAMPLED_BIT;
-        imgInfo.stages      = VK_PIPELINE_STAGE_TRANSFER_BIT
-                            | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        imgInfo.stages      =  VK_PIPELINE_STAGE_2_TRANSFER_BIT
+                            |  VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
         imgInfo.access      = VK_ACCESS_TRANSFER_WRITE_BIT
                             | VK_ACCESS_SHADER_READ_BIT;
         imgInfo.tiling      = VK_IMAGE_TILING_OPTIMAL;
@@ -360,9 +360,9 @@ namespace dxvk {
     newInfo.usage  = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
                    | VK_IMAGE_USAGE_TRANSFER_DST_BIT
                    | VK_IMAGE_USAGE_SAMPLED_BIT;
-    newInfo.stages = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
-                   | VK_PIPELINE_STAGE_TRANSFER_BIT
-                   | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    newInfo.stages =  VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT
+                   |  VK_PIPELINE_STAGE_2_TRANSFER_BIT
+                   |  VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
     newInfo.access = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT
                    | VK_ACCESS_TRANSFER_WRITE_BIT
                    | VK_ACCESS_SHADER_READ_BIT;

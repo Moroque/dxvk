@@ -766,7 +766,7 @@ namespace dxvk {
         cBuffer   = buffer->GetBuffer()
       ] (DxvkContext* ctx) {
         ctx->emitBufferBarrier(cBuffer,
-          VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+           VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
           VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT,
           cBuffer->info().stages,
           cBuffer->info().access);
@@ -777,7 +777,7 @@ namespace dxvk {
         cLayout   = SrcLayout
       ] (DxvkContext* ctx) {
         ctx->emitImageBarrier(cImage, cLayout,
-          VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+           VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
           VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT,
           cImage->info().layout,
           cImage->info().stages,
@@ -802,7 +802,7 @@ namespace dxvk {
         ctx->emitBufferBarrier(cBuffer,
           cBuffer->info().stages,
           cBuffer->info().access,
-          VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+           VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
           VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT);
       });
     } else if (texture) {
@@ -814,7 +814,7 @@ namespace dxvk {
           cImage->info().layout,
           cImage->info().stages,
           cImage->info().access,
-          cLayout, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+          cLayout,  VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
           VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT);
       });
     }

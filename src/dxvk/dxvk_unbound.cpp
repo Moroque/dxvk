@@ -88,7 +88,7 @@ namespace dxvk {
                     | VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT
                     | VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT
                     | VK_BUFFER_USAGE_TRANSFORM_FEEDBACK_BUFFER_BIT_EXT;
-    info.stages     = VK_PIPELINE_STAGE_TRANSFER_BIT
+    info.stages     =  VK_PIPELINE_STAGE_2_TRANSFER_BIT
                     | m_device->getShaderPipelineStages();
     info.access     = VK_ACCESS_UNIFORM_READ_BIT
                     | VK_ACCESS_SHADER_READ_BIT

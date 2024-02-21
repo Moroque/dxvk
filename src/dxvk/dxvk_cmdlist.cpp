@@ -236,14 +236,14 @@ namespace dxvk {
         // Wait for per-command list semaphores on first submission
         for (const auto& entry : m_waitSemaphores) {
           m_commandSubmission.waitSemaphore(entry.fence->handle(),
-            entry.value, VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT);
+            entry.value,  VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT);
         }
       }
 
       if (sparseBind) {
         // Sparse binding needs to serialize command execution, so wait
         // for any prior submissions, then block any subsequent ones
-        m_commandSubmission.signalSemaphore(m_bindSemaphore, 0, VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT);
+        m_commandSubmission.signalSemaphore(m_bindSemaphore, 0,  VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT);
 
         if ((status = m_commandSubmission.submit(m_device, graphics.queueHandle, frameId)))
           return status;
@@ -254,7 +254,7 @@ namespace dxvk {
         if ((status = sparseBind->submit(m_device, sparse.queueHandle)))
           return status;
 
-        m_commandSubmission.waitSemaphore(m_postSemaphore, 0, VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT);
+        m_commandSubmission.waitSemaphore(m_postSemaphore, 0,  VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT);
       }
 
       // Submit transfer commands as necessary
@@ -264,19 +264,19 @@ namespace dxvk {
       // If we had either a transfer command or a semaphore wait, submit to the
       // transfer queue so that all subsequent commands get stalled as necessary.
       if (m_device->hasDedicatedTransferQueue() && !m_commandSubmission.isEmpty()) {
-        m_commandSubmission.signalSemaphore(m_sdmaSemaphore, 0, VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT);
+        m_commandSubmission.signalSemaphore(m_sdmaSemaphore, 0,  VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT);
 
         if ((status = m_commandSubmission.submit(m_device, transfer.queueHandle, frameId)))
           return status;
 
-        m_commandSubmission.waitSemaphore(m_sdmaSemaphore, 0, VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT);
+        m_commandSubmission.waitSemaphore(m_sdmaSemaphore, 0,  VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT);
       }
 
       // We promise to never do weird stuff to WSI images on
       // the transfer queue, so blocking graphics is sufficient
       if (isFirst && m_wsiSemaphores.acquire) {
         m_commandSubmission.waitSemaphore(m_wsiSemaphores.acquire,
-          0, VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT);
+          0,  VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT);
       }
 
       // Submit graphics commands
@@ -290,13 +290,13 @@ namespace dxvk {
         // Signal per-command list semaphores on the final submission
         for (const auto& entry : m_signalSemaphores) {
           m_commandSubmission.signalSemaphore(entry.fence->handle(),
-            entry.value, VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT);
+            entry.value,  VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT);
         }
 
         // Signal WSI semaphore on the final submission
         if (m_wsiSemaphores.present) {
           m_commandSubmission.signalSemaphore(m_wsiSemaphores.present,
-            0, VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT);
+            0,  VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT);
         }
 
         // Signal synchronization fence on final submission

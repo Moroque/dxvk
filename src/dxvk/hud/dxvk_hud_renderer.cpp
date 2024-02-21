@@ -233,8 +233,8 @@ namespace dxvk::hud {
     info.size           = DataBufferSize;
     info.usage          = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
                         | VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT;
-    info.stages         = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT
-                        | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    info.stages         =  VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT
+                        |  VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
     info.access         = VK_ACCESS_SHADER_READ_BIT;
     
     return m_device->createBuffer(info,
@@ -259,8 +259,8 @@ namespace dxvk::hud {
     info.size           = sizeof(HudFontGpuData);
     info.usage          = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
                         | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-    info.stages         = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT
-                        | VK_PIPELINE_STAGE_TRANSFER_BIT;
+    info.stages         =  VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT
+                        |  VK_PIPELINE_STAGE_2_TRANSFER_BIT;
     info.access         = VK_ACCESS_SHADER_READ_BIT
                         | VK_ACCESS_TRANSFER_WRITE_BIT;
     
@@ -289,8 +289,8 @@ namespace dxvk::hud {
     info.mipLevels      = 1;
     info.usage          = VK_IMAGE_USAGE_TRANSFER_DST_BIT
                         | VK_IMAGE_USAGE_SAMPLED_BIT;
-    info.stages         = VK_PIPELINE_STAGE_TRANSFER_BIT
-                        | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    info.stages         =  VK_PIPELINE_STAGE_2_TRANSFER_BIT
+                        |  VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
     info.access         = VK_ACCESS_TRANSFER_WRITE_BIT
                         | VK_ACCESS_SHADER_READ_BIT;
     info.tiling         = VK_IMAGE_TILING_OPTIMAL;

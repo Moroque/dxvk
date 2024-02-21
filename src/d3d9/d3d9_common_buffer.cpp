@@ -100,23 +100,23 @@ namespace dxvk {
 
     if (m_desc.Type == D3DRTYPE_VERTEXBUFFER) {
       info.usage  |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-      info.stages |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+      info.stages |=  VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT;
       info.access |= VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
 
       if (m_parent->SupportsSWVP()) {
         info.usage  |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-        info.stages |= VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT;
+        info.stages |=  VK_PIPELINE_STAGE_2_GEOMETRY_SHADER_BIT;
         info.access |= VK_ACCESS_SHADER_WRITE_BIT;
       }
     }
     else if (m_desc.Type == D3DRTYPE_INDEXBUFFER) {
       info.usage  |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-      info.stages |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+      info.stages |=  VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT;
       info.access |= VK_ACCESS_INDEX_READ_BIT;
     }
 
     if (m_mapMode == D3D9_COMMON_BUFFER_MAP_MODE_DIRECT) {
-      info.stages |= VK_PIPELINE_STAGE_HOST_BIT;
+      info.stages |=  VK_PIPELINE_STAGE_2_HOST_BIT;
       info.access |= VK_ACCESS_HOST_WRITE_BIT;
 
       if (!(m_desc.Usage & D3DUSAGE_WRITEONLY))
@@ -127,7 +127,7 @@ namespace dxvk {
                   |  VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
     }
     else {
-      info.stages |= VK_PIPELINE_STAGE_TRANSFER_BIT;
+      info.stages |=  VK_PIPELINE_STAGE_2_TRANSFER_BIT;
       info.usage  |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
       info.access |= VK_ACCESS_TRANSFER_WRITE_BIT;
 
@@ -147,8 +147,8 @@ namespace dxvk {
   Rc<DxvkBuffer> D3D9CommonBuffer::CreateStagingBuffer() const {
     DxvkBufferCreateInfo  info;
     info.size   = m_desc.Size;
-    info.stages = VK_PIPELINE_STAGE_HOST_BIT
-                | VK_PIPELINE_STAGE_TRANSFER_BIT;
+    info.stages =  VK_PIPELINE_STAGE_2_HOST_BIT
+                |  VK_PIPELINE_STAGE_2_TRANSFER_BIT;
 
     info.usage  = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 

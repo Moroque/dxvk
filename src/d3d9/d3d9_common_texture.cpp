@@ -202,8 +202,8 @@ namespace dxvk {
     info.usage  = VK_BUFFER_USAGE_TRANSFER_SRC_BIT
                 | VK_BUFFER_USAGE_TRANSFER_DST_BIT
                 | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-    info.stages = VK_PIPELINE_STAGE_TRANSFER_BIT
-                | VK_PIPELINE_STAGE_HOST_BIT;
+    info.stages =  VK_PIPELINE_STAGE_2_TRANSFER_BIT
+                |  VK_PIPELINE_STAGE_2_HOST_BIT;
     info.access = VK_ACCESS_TRANSFER_READ_BIT
                 | VK_ACCESS_TRANSFER_WRITE_BIT
                 | VK_ACCESS_HOST_WRITE_BIT
@@ -211,7 +211,7 @@ namespace dxvk {
 
     if (m_mapping.ConversionFormatInfo.FormatType != D3D9ConversionFormat_None) {
       info.usage  |= VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT;
-      info.stages |= VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+      info.stages |=  VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
     }
 
     VkMemoryPropertyFlags memType = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
@@ -278,7 +278,7 @@ namespace dxvk {
     imageInfo.usage           = VK_IMAGE_USAGE_TRANSFER_SRC_BIT
                               | VK_IMAGE_USAGE_TRANSFER_DST_BIT
                               | VK_IMAGE_USAGE_SAMPLED_BIT;
-    imageInfo.stages          = VK_PIPELINE_STAGE_TRANSFER_BIT
+    imageInfo.stages          =  VK_PIPELINE_STAGE_2_TRANSFER_BIT
                               | m_device->GetEnabledShaderStages();
     imageInfo.access          = VK_ACCESS_TRANSFER_READ_BIT
                               | VK_ACCESS_TRANSFER_WRITE_BIT
@@ -300,7 +300,7 @@ namespace dxvk {
 
     if (m_mapping.ConversionFormatInfo.FormatType != D3D9ConversionFormat_None) {
       imageInfo.usage  |= VK_IMAGE_USAGE_STORAGE_BIT;
-      imageInfo.stages |= VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+      imageInfo.stages |=  VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
     }
 
     DecodeMultiSampleType(m_device->GetDXVKDevice(), m_desc.MultiSample, m_desc.MultisampleQuality, &imageInfo.sampleCount);
@@ -329,15 +329,15 @@ namespace dxvk {
     // Are we an RT, need to gen mips or an offscreen plain surface?
     if (isRT || isAutoGen || TryOffscreenRT) {
       imageInfo.usage  |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-      imageInfo.stages |= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+      imageInfo.stages |=  VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
       imageInfo.access |= VK_ACCESS_COLOR_ATTACHMENT_READ_BIT
                        |  VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
     }
 
     if (isDS) {
       imageInfo.usage  |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-      imageInfo.stages |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT
-                       |  VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+      imageInfo.stages |=  VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT
+                       |   VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
       imageInfo.access |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT
                        |  VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
     }
