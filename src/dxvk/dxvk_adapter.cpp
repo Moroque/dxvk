@@ -419,6 +419,10 @@ namespace dxvk {
       enabledFeatures.khrPresentWait.presentWait = VK_FALSE;
     }
 
+    // Enable raw access chains for shader backends
+    enabledFeatures.nvRawAccessChains.shaderRawAccessChains =
+      m_deviceFeatures.nvRawAccessChains.shaderRawAccessChains;
+
     // Create pNext chain for additional device features
     initFeatureChain(enabledFeatures, devExtensions, instance->extensions());
 
@@ -612,6 +616,10 @@ namespace dxvk {
 
         case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_WAIT_FEATURES_KHR:
           enabledFeatures.khrPresentWait = *reinterpret_cast<const VkPhysicalDevicePresentWaitFeaturesKHR*>(f);
+          break;
+
+        case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAW_ACCESS_CHAINS_FEATURES_NV:
+          enabledFeatures.nvRawAccessChains = *reinterpret_cast<const VkPhysicalDeviceRawAccessChainsFeaturesNV*>(f);
           break;
 
         default:
@@ -946,6 +954,11 @@ namespace dxvk {
 	if (m_deviceExtensions.supports(VK_NV_FILL_RECTANGLE_EXTENSION_NAME))
       m_deviceFeatures.nvFillRectangle = VK_TRUE;
   
+    if (m_deviceExtensions.supports(VK_NV_RAW_ACCESS_CHAINS_EXTENSION_NAME)) {
+      m_deviceFeatures.nvRawAccessChains.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAW_ACCESS_CHAINS_FEATURES_NV;
+      m_deviceFeatures.nvRawAccessChains.pNext = std::exchange(m_deviceFeatures.core.pNext, &m_deviceFeatures.nvRawAccessChains);
+    }
+
     if (m_deviceExtensions.supports(VK_NVX_BINARY_IMPORT_EXTENSION_NAME))
       m_deviceFeatures.nvxBinaryImport = VK_TRUE;
 
@@ -1016,6 +1029,7 @@ namespace dxvk {
       &devExtensions.khrWin32KeyedMutex,
       &devExtensions.nvLowLatency2,
 	  &devExtensions.nvFillRectangle,
+      &devExtensions.nvRawAccessChains,
       &devExtensions.nvxBinaryImport,
       &devExtensions.nvxImageViewHandle,
     }};
@@ -1160,7 +1174,12 @@ namespace dxvk {
       enabledFeatures.khrPresentWait.pNext = std::exchange(enabledFeatures.core.pNext, &enabledFeatures.khrPresentWait);
     }
 
-    if (devExtensions.nvxBinaryImport) 
+    if (devExtensions.nvRawAccessChains) {
+      enabledFeatures.nvRawAccessChains.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAW_ACCESS_CHAINS_FEATURES_NV;
+      enabledFeatures.nvRawAccessChains.pNext = std::exchange(enabledFeatures.core.pNext, &enabledFeatures.nvRawAccessChains);
+    }
+
+    if (devExtensions.nvxBinaryImport)
       enabledFeatures.nvxBinaryImport = VK_TRUE;
 
     if (devExtensions.nvLowLatency2) 
@@ -1318,6 +1337,8 @@ namespace dxvk {
       "\n  extension supported                    : ", features.nvFillRectangle ? "1" : "0",
       "\n", VK_NV_LOW_LATENCY_2_EXTENSION_NAME,
       "\n  extension supported                    : ", features.nvLowLatency2 ? "1" : "0",
+      "\n", VK_NV_RAW_ACCESS_CHAINS_EXTENSION_NAME,
+      "\n  shaderRawAccessChains                  : ", features.nvRawAccessChains.shaderRawAccessChains ? "1" : "0",
       "\n", VK_NVX_BINARY_IMPORT_EXTENSION_NAME,
       "\n  extension supported                    : ", features.nvxBinaryImport ? "1" : "0",
       "\n", VK_NVX_IMAGE_VIEW_HANDLE_EXTENSION_NAME,
