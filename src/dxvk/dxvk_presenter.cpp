@@ -504,13 +504,13 @@ namespace dxvk {
     uint32_t timingCount = 0;
 
     std::lock_guard<dxvk::mutex> lock(m_lowLatencyMutex);
-    m_vkd->vkGetLatencyTimingsNV(m_vkd->device(), m_swapchain, &timingCount, &markerInfo);
+    m_vkd->vkGetLatencyTimingsNV(m_vkd->device(), m_swapchain, &markerInfo);
 
     if (timingCount != 0) {
       frameReports.resize(timingCount, { VK_STRUCTURE_TYPE_GET_LATENCY_MARKER_INFO_NV });
       markerInfo.pTimings = frameReports.data();
 
-      m_vkd->vkGetLatencyTimingsNV(m_vkd->device(), m_swapchain, &timingCount, &markerInfo);
+      m_vkd->vkGetLatencyTimingsNV(m_vkd->device(), m_swapchain, &markerInfo);
     }
 
     return VK_SUCCESS;

@@ -253,7 +253,7 @@ namespace dxvk {
     VkPipelineStageFlags2 getShaderPipelineStages() const;
     
     /**
-     * \brief Retrieves device options
+     * \brief Retrieves device options[
      * \returns Device options
      */
     DxvkDeviceOptions options() const;

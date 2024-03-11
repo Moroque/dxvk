@@ -452,20 +452,20 @@ namespace dxvk {
     // Max Texture Height
     pCaps->MaxTextureHeight         = MaxTextureDimension;
     // Max Volume Extent
-    pCaps->MaxVolumeExtent          = 8192;
+    pCaps->MaxVolumeExtent          = 2048;
     // Max Texture Repeat
     pCaps->MaxTextureRepeat         = 8192;
     // Max Texture Aspect Ratio
-    pCaps->MaxTextureAspectRatio    = 8192;
+    pCaps->MaxTextureAspectRatio    = 16384;
     // Max Anisotropy
     pCaps->MaxAnisotropy            = 16;
     // Max Vertex W
     pCaps->MaxVertexW               = 1e10f;
     // Guard Bands
-    pCaps->GuardBandLeft            = -32768.0f;
-    pCaps->GuardBandTop             = -32768.0f;
-    pCaps->GuardBandRight           =  32768.0f;
-    pCaps->GuardBandBottom          =  32768.0f;
+    pCaps->GuardBandLeft            = -1e09f;
+    pCaps->GuardBandTop             = -1e09f;
+    pCaps->GuardBandRight           =  1e09f;
+    pCaps->GuardBandBottom          =  1e09f;
     // Extents Adjust
     pCaps->ExtentsAdjust            = 0.0f;
     // Stencil Caps
@@ -533,13 +533,13 @@ namespace dxvk {
     // Max Point Size
     pCaps->MaxPointSize              = 256.0f;
     // Max Primitive Count
-    pCaps->MaxPrimitiveCount         = 0x00555555;
+    pCaps->MaxPrimitiveCount         = 0x00ffffff;
     // Max Vertex Index
     pCaps->MaxVertexIndex            = 0x00ffffff;
     // Max Streams
     pCaps->MaxStreams                = MaxStreams;
     // Max Stream Stride
-    pCaps->MaxStreamStride           = 508; // bytes
+    pCaps->MaxStreamStride           = 255; // bytes
 
     const uint32_t majorVersion = options.shaderModel;
     const uint32_t minorVersion = options.shaderModel != 1 ? 0 : 4;
@@ -551,7 +551,7 @@ namespace dxvk {
     // Max Vertex Shader Const
     pCaps->MaxVertexShaderConst       = MaxFloatConstantsVS;
     // Max PS1 Value
-    pCaps->PixelShader1xMaxValue      = FLT_MAX;
+    pCaps->PixelShader1xMaxValue      = 65504;
     // Dev Caps 2
     pCaps->DevCaps2                   = D3DDEVCAPS2_STREAMOFFSET
                                    /* | D3DDEVCAPS2_DMAPNPATCH */
@@ -614,11 +614,11 @@ namespace dxvk {
     pCaps->PS20Caps.NumInstructionSlots      = options.shaderModel >= 2 ? 512 : 256;
 
     pCaps->VertexTextureFilterCaps           = 50332416;
-    pCaps->MaxVShaderInstructionsExecuted    = 4294967295;
-    pCaps->MaxPShaderInstructionsExecuted    = 4294967295;
+    pCaps->MaxVShaderInstructionsExecuted    = 65535;
+    pCaps->MaxPShaderInstructionsExecuted    = 65535;
 
-    pCaps->MaxVertexShader30InstructionSlots = options.shaderModel == 3 ? 32768 : 0;
-    pCaps->MaxPixelShader30InstructionSlots  = options.shaderModel == 3 ? 32768 : 0;
+    pCaps->MaxVertexShader30InstructionSlots = options.shaderModel == 3 ? 4096 : 0;
+    pCaps->MaxPixelShader30InstructionSlots  = options.shaderModel == 3 ? 4096 : 0;
 
     return D3D_OK;
   }
