@@ -481,6 +481,14 @@ namespace dxvk {
       return hr;
     }
 
+    // Unbind all buffers that were still bound to the backend to avoid leaks.
+    EmitCs([](DxvkContext* ctx) {
+      ctx->bindIndexBuffer(DxvkBufferSlice(), VK_INDEX_TYPE_UINT32);
+      for (uint32_t i = 0; i < caps::MaxStreams; i++) {
+        ctx->bindVertexBuffer(i, DxvkBufferSlice(), 0);
+      }
+    });
+
     Flush();
     SynchronizeCsThread(DxvkCsThread::SynchronizeAll);
 
@@ -1085,7 +1093,12 @@ namespace dxvk {
     if (unlikely(iSwapChain != 0))
       return D3DERR_INVALIDCALL;
 
-    return m_implicitSwapchain->GetFrontBufferData(pDestSurface);
+    D3D9DeviceLock lock = LockDevice();
+
+    // In windowed mode, GetFrontBufferData takes a screenshot of the entire screen.
+    // We use the last used swapchain as a workaround.
+    // Total War: Medieval 2 relies on this.
+    return m_mostRecentlyUsedSwapchain->GetFrontBufferData(pDestSurface);
   }
 
 
@@ -1602,6 +1615,23 @@ namespace dxvk {
     ConsiderFlush(GpuFlushType::ImplicitStrongHint);
 
     m_flags.clr(D3D9DeviceFlag::InScene);
+
+    // D3D9 resets the internally bound vertex buffers and index buffer in EndScene if they were unbound in the meantime.
+    // We have to ignore unbinding those buffers because of Operation Flashpoint Red River,
+    // so we should also clear the bindings here, to avoid leaks.
+    if (m_state.indices == nullptr) {
+      EmitCs([](DxvkContext* ctx) {
+        ctx->bindIndexBuffer(DxvkBufferSlice(), VK_INDEX_TYPE_UINT32);
+      });
+    }
+    
+    for (uint32_t i = 0; i < caps::MaxStreams; i++) {
+      if (m_state.vertexBuffers[i].vertexBuffer == nullptr) {
+        EmitCs([cIndex = i](DxvkContext* ctx) {
+          ctx->bindVertexBuffer(cIndex, DxvkBufferSlice(), 0);
+        });
+      }
+    }
 
     return D3D_OK;
   }
@@ -5223,7 +5253,7 @@ namespace dxvk {
         auto* vbo = GetCommonBuffer(m_state.vertexBuffers[i].vertexBuffer);
 
         const uint32_t vertexStride = m_state.vertexDecl->GetSize(i);
-        uint32_t offset = (BaseVertexIndex + FirstVertexIndex) * vertexStride;
+        uint32_t offset = (BaseVertexIndex + FirstVertexIndex) * vertexStride + m_state.vertexBuffers[i].offset;
 
         uint8_t* data = reinterpret_cast<uint8_t*>(upSlice.mapPtr) + vboUPBufferOffsets[i];
         uint8_t* src = reinterpret_cast<uint8_t*>(vbo->GetMappedSlice().mapPtr) + offset;
@@ -5325,7 +5355,7 @@ namespace dxvk {
 
     // Round to nearest
     _controlfp(_RC_NEAR, _MCW_RC);
-#elif (defined(__GNUC__) || defined(__MINGW32__)) && (defined(__i386__) || defined(__x86_64__) || defined(__ia64))
+#elif (defined(__GNUC__) || defined(__MINGW32__)) && (defined(__i386__) || (defined(__x86_64__) && !defined(__arm64ec__)) || defined(__ia64))
     // For GCC/MinGW we can use inline asm to set it.
     // This only works for x86 and x64 processors however.
 
@@ -7819,8 +7849,10 @@ namespace dxvk {
       if (FAILED(hr))
         return hr;
     }
-    else
+    else {
       m_implicitSwapchain = new D3D9SwapChainEx(this, pPresentationParameters, pFullscreenDisplayMode);
+      m_mostRecentlyUsedSwapchain = m_implicitSwapchain.ptr();
+    }
 
     if (pPresentationParameters->EnableAutoDepthStencil) {
       D3D9_COMMON_TEXTURE_DESC desc;
