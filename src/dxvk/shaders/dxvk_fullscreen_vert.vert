@@ -1,4 +1,4 @@
-#version 450
+#version 460
 
 layout(location = 0) out int  o_instance;
 layout(location = 1) out vec2 o_texcoord;

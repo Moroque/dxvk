@@ -1,4 +1,4 @@
-#version 450
+#version 460
 
 layout(constant_id = 1) const bool s_gamma_bound = false;
 
