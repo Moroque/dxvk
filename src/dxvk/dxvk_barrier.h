@@ -511,36 +511,36 @@ namespace dxvk {
     ~DxvkBarrierSet();
 
     void accessMemory(
-            VkPipelineStageFlags2      srcStages,
+            VkPipelineStageFlags      srcStages,
             VkAccessFlags             srcAccess,
-            VkPipelineStageFlags2      dstStages,
+            VkPipelineStageFlags      dstStages,
             VkAccessFlags             dstAccess);
 
     void accessBuffer(
       const DxvkBufferSliceHandle&    bufSlice,
-            VkPipelineStageFlags2      srcStages,
+            VkPipelineStageFlags      srcStages,
             VkAccessFlags             srcAccess,
-            VkPipelineStageFlags2      dstStages,
+            VkPipelineStageFlags      dstStages,
             VkAccessFlags             dstAccess);
     
     void accessImage(
       const Rc<DxvkImage>&            image,
       const VkImageSubresourceRange&  subresources,
             VkImageLayout             srcLayout,
-            VkPipelineStageFlags2      srcStages,
+            VkPipelineStageFlags      srcStages,
             VkAccessFlags             srcAccess,
             VkImageLayout             dstLayout,
-            VkPipelineStageFlags2      dstStages,
+            VkPipelineStageFlags      dstStages,
             VkAccessFlags             dstAccess);
 
     void releaseBuffer(
             DxvkBarrierSet&           acquire,
       const DxvkBufferSliceHandle&    bufSlice,
             uint32_t                  srcQueue,
-            VkPipelineStageFlags2      srcStages,
+            VkPipelineStageFlags      srcStages,
             VkAccessFlags             srcAccess,
             uint32_t                  dstQueue,
-            VkPipelineStageFlags2      dstStages,
+            VkPipelineStageFlags      dstStages,
             VkAccessFlags             dstAccess);
 
     void releaseImage(
@@ -549,11 +549,11 @@ namespace dxvk {
       const VkImageSubresourceRange&  subresources,
             uint32_t                  srcQueue,
             VkImageLayout             srcLayout,
-            VkPipelineStageFlags2      srcStages,
+            VkPipelineStageFlags      srcStages,
             VkAccessFlags             srcAccess,
             uint32_t                  dstQueue,
             VkImageLayout             dstLayout,
-            VkPipelineStageFlags2      dstStages,
+            VkPipelineStageFlags      dstStages,
             VkAccessFlags             dstAccess);
     
     bool isBufferDirty(
@@ -572,7 +572,7 @@ namespace dxvk {
       const Rc<DxvkImage>&            image,
       const VkImageSubresourceRange&  imgSubres);
     
-    VkPipelineStageFlags2 getSrcStages() {
+    VkPipelineStageFlags getSrcStages() {
       return m_allBarrierSrcStages;
     }
     

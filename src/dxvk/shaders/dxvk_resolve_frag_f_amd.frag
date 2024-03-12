@@ -1,4 +1,4 @@
-#version 460
+#version 450
 
 #extension GL_EXT_samplerless_texture_functions : enable
 #extension GL_EXT_spirv_intrinsics : enable

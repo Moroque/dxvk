@@ -36,7 +36,7 @@ namespace dxvk {
     imageInfo.mipLevels       = m_desc.MipLevels;
     imageInfo.usage           = VK_IMAGE_USAGE_TRANSFER_SRC_BIT
                               | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-    imageInfo.stages          =  VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+    imageInfo.stages          = VK_PIPELINE_STAGE_TRANSFER_BIT;
     imageInfo.access          = VK_ACCESS_TRANSFER_READ_BIT
                               | VK_ACCESS_TRANSFER_WRITE_BIT;
     imageInfo.tiling          = VK_IMAGE_TILING_OPTIMAL;
@@ -103,15 +103,15 @@ namespace dxvk {
     
     if (m_desc.BindFlags & D3D11_BIND_RENDER_TARGET) {
       imageInfo.usage  |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-      imageInfo.stages |=  VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+      imageInfo.stages |= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
       imageInfo.access |= VK_ACCESS_COLOR_ATTACHMENT_READ_BIT
                        |  VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
     }
     
     if (m_desc.BindFlags & D3D11_BIND_DEPTH_STENCIL) {
       imageInfo.usage  |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-      imageInfo.stages |=  VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT
-                       |   VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
+      imageInfo.stages |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT
+                       |  VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
       imageInfo.access |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT
                        |  VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
     }
@@ -140,7 +140,7 @@ namespace dxvk {
     // Access pattern for meta-resolve operations
     if (imageInfo.sampleCount != VK_SAMPLE_COUNT_1_BIT && isColorFormat) {
       imageInfo.usage  |= VK_IMAGE_USAGE_SAMPLED_BIT;
-      imageInfo.stages |=  VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
+      imageInfo.stages |= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
       imageInfo.access |= VK_ACCESS_SHADER_READ_BIT;
     }
     
@@ -160,7 +160,7 @@ namespace dxvk {
     // Swap chain back buffers need to be shader readable
     if (DxgiUsage & DXGI_USAGE_BACK_BUFFER) {
       imageInfo.usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
-      imageInfo.stages |=  VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
+      imageInfo.stages |= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
       imageInfo.access |= VK_ACCESS_SHADER_READ_BIT;
       imageInfo.shared = VK_TRUE;
     }
@@ -181,7 +181,7 @@ namespace dxvk {
       imageInfo.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
 
       if (pDesc->Usage != D3D11_USAGE_DYNAMIC) {
-        imageInfo.stages |=  VK_PIPELINE_STAGE_2_HOST_BIT;
+        imageInfo.stages |= VK_PIPELINE_STAGE_HOST_BIT;
         imageInfo.access |= VK_ACCESS_HOST_READ_BIT;
 
         if (pDesc->CPUAccessFlags & D3D11_CPU_ACCESS_WRITE)
@@ -755,8 +755,8 @@ namespace dxvk {
                 | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
                 | VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT
                 | VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT;
-    info.stages =  VK_PIPELINE_STAGE_2_TRANSFER_BIT
-                |  VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+    info.stages = VK_PIPELINE_STAGE_TRANSFER_BIT
+                | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
     info.access = VK_ACCESS_TRANSFER_READ_BIT
                 | VK_ACCESS_TRANSFER_WRITE_BIT
                 | VK_ACCESS_SHADER_READ_BIT
@@ -765,7 +765,7 @@ namespace dxvk {
     // We may read mapped buffers even if it is
     // marked as CPU write-only on the D3D11 side.
     if (m_desc.Usage != D3D11_USAGE_DYNAMIC) {
-      info.stages |=  VK_PIPELINE_STAGE_2_HOST_BIT;
+      info.stages |= VK_PIPELINE_STAGE_HOST_BIT;
       info.access |= VK_ACCESS_HOST_READ_BIT;
 
       if (m_desc.CPUAccessFlags & D3D11_CPU_ACCESS_WRITE)

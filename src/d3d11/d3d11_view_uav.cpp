@@ -440,7 +440,7 @@ namespace dxvk {
     info.usage  = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
                 | VK_BUFFER_USAGE_TRANSFER_DST_BIT
                 | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-    info.stages =  VK_PIPELINE_STAGE_2_TRANSFER_BIT
+    info.stages = VK_PIPELINE_STAGE_TRANSFER_BIT
                 | device->getShaderPipelineStages();
     info.access = VK_ACCESS_TRANSFER_WRITE_BIT
                 | VK_ACCESS_TRANSFER_READ_BIT

@@ -4292,7 +4292,7 @@ namespace dxvk {
                   | VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
       info.access = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT
                   | VK_ACCESS_INDEX_READ_BIT;
-      info.stages =  VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT;
+      info.stages = VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
 
       Rc<DxvkBuffer> buffer = m_dxvkDevice->createBuffer(info, memoryFlags);
 
@@ -5842,22 +5842,22 @@ namespace dxvk {
     EmitCs([
       cHazardState = hazardState
     ](DxvkContext* ctx) {
-      VkPipelineStageFlags2 srcStages = 0;
+      VkPipelineStageFlags srcStages = 0;
       VkAccessFlags srcAccess = 0;
 
       if (cHazardState.RT != 0) {
-        srcStages |=  VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+        srcStages |= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
         srcAccess |= VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
       }
       if (cHazardState.DS != 0) {
-        srcStages |=  VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT |  VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
+        srcStages |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
         srcAccess |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
       }
 
       ctx->emitGraphicsBarrier(
         srcStages,
         srcAccess,
-         VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
         VK_ACCESS_SHADER_READ_BIT);
     });
 

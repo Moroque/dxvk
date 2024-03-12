@@ -1,4 +1,4 @@
-#version 460
+#version 450
 
 #extension GL_AMD_shader_fragment_mask: enable
 

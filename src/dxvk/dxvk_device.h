@@ -250,7 +250,7 @@ namespace dxvk {
      * \brief Queries supported shader stages
      * \returns Supported shader pipeline stages
      */
-    VkPipelineStageFlags2 getShaderPipelineStages() const;
+    VkPipelineStageFlags getShaderPipelineStages() const;
     
     /**
      * \brief Retrieves device options[

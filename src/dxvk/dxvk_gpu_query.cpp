@@ -340,7 +340,7 @@ namespace dxvk {
       handle.queryId);
     
     cmd->cmdWriteTimestamp(
-       VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+      VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
       handle.queryPool,
       handle.queryId);
     

@@ -99,17 +99,17 @@ namespace dxvk {
   }
 
 
-  VkPipelineStageFlags2 DxvkDevice::getShaderPipelineStages() const {
-    VkPipelineStageFlags2 result =  VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT
-                                |  VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT
-                                |  VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
+  VkPipelineStageFlags DxvkDevice::getShaderPipelineStages() const {
+    VkPipelineStageFlags result = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT
+                                | VK_PIPELINE_STAGE_VERTEX_SHADER_BIT
+                                | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
     
     if (m_features.core.features.geometryShader)
-      result |=  VK_PIPELINE_STAGE_2_GEOMETRY_SHADER_BIT;
+      result |= VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT;
     
     if (m_features.core.features.tessellationShader) {
-      result |=  VK_PIPELINE_STAGE_2_TESSELLATION_CONTROL_SHADER_BIT
-             |   VK_PIPELINE_STAGE_2_TESSELLATION_EVALUATION_SHADER_BIT;
+      result |= VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT
+             |  VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT;
     }
 
     return result;

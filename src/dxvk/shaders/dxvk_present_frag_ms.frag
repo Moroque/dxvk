@@ -1,4 +1,4 @@
-#version 460
+#version 450
 
 layout(constant_id = 0) const uint c_samples = 0;
 layout(constant_id = 1) const bool s_gamma_bound = false;

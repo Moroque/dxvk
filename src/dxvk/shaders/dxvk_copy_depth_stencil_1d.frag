@@ -1,4 +1,4 @@
-#version 460
+#version 450
 
 #extension GL_ARB_shader_stencil_export : require
 #extension GL_EXT_samplerless_texture_functions : require

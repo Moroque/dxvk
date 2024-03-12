@@ -25,18 +25,18 @@ namespace dxvk {
 
     // Default destination barriers for graphics pipelines
     m_globalRoGraphicsBarrier.stages = m_device->getShaderPipelineStages()
-                                     |  VK_PIPELINE_STAGE_2_TRANSFER_BIT
-                                     |  VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT
-                                     |  VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT
-                                     |  VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
+                                     | VK_PIPELINE_STAGE_TRANSFER_BIT
+                                     | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
+                                     | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT
+                                     | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
     m_globalRoGraphicsBarrier.access = 0;
 
     if (m_device->features().extTransformFeedback.transformFeedback)
-      m_globalRoGraphicsBarrier.stages |=  VK_PIPELINE_STAGE_2_TRANSFORM_FEEDBACK_BIT_EXT;
+      m_globalRoGraphicsBarrier.stages |= VK_PIPELINE_STAGE_TRANSFORM_FEEDBACK_BIT_EXT;
 
     m_globalRwGraphicsBarrier = m_globalRoGraphicsBarrier;
-    m_globalRwGraphicsBarrier.stages |=  VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT
-                                     |   VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT;
+    m_globalRwGraphicsBarrier.stages |= VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT
+                                     |  VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
 
     m_globalRwGraphicsBarrier.access |= VK_ACCESS_INDIRECT_COMMAND_READ_BIT
                                      |  VK_ACCESS_INDEX_READ_BIT
@@ -236,7 +236,7 @@ namespace dxvk {
       : m_execBarriers;
 
     barriers.accessBuffer(bufferSlice,
-       VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+      VK_PIPELINE_STAGE_TRANSFER_BIT,
       VK_ACCESS_TRANSFER_WRITE_BIT,
       buffer->info().stages,
       buffer->info().access);
@@ -306,7 +306,7 @@ namespace dxvk {
       workgroups.depth);
     
     m_execBarriers.accessBuffer(bufferSlice,
-       VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+      VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
       VK_ACCESS_SHADER_WRITE_BIT,
       bufferView->bufferInfo().stages,
       bufferView->bufferInfo().access);
@@ -435,13 +435,13 @@ namespace dxvk {
       : m_execBarriers;
 
     barriers.accessBuffer(srcSlice,
-       VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+      VK_PIPELINE_STAGE_TRANSFER_BIT,
       VK_ACCESS_TRANSFER_READ_BIT,
       srcBuffer->info().stages,
       srcBuffer->info().access);
 
     barriers.accessBuffer(dstSlice,
-       VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+      VK_PIPELINE_STAGE_TRANSFER_BIT,
       VK_ACCESS_TRANSFER_WRITE_BIT,
       dstBuffer->info().stages,
       dstBuffer->info().access);
@@ -464,7 +464,7 @@ namespace dxvk {
       bufInfo.size    = numBytes;
       bufInfo.usage   = VK_BUFFER_USAGE_TRANSFER_DST_BIT
                       | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-      bufInfo.stages  =  VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+      bufInfo.stages  = VK_PIPELINE_STAGE_TRANSFER_BIT;
       bufInfo.access  = VK_ACCESS_TRANSFER_WRITE_BIT
                       | VK_ACCESS_TRANSFER_READ_BIT;
 
@@ -517,9 +517,9 @@ namespace dxvk {
       m_execAcquires.accessImage(
         dstImage, dstSubresourceRange,
         dstImageLayoutInitial,
-         VK_PIPELINE_STAGE_2_TRANSFER_BIT, 0,
+        VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
         dstImageLayoutTransfer,
-         VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+        VK_PIPELINE_STAGE_TRANSFER_BIT,
         VK_ACCESS_TRANSFER_WRITE_BIT);
     }
       
@@ -531,14 +531,14 @@ namespace dxvk {
     m_execBarriers.accessImage(
       dstImage, dstSubresourceRange,
       dstImageLayoutTransfer,
-       VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+      VK_PIPELINE_STAGE_TRANSFER_BIT,
       VK_ACCESS_TRANSFER_WRITE_BIT,
       dstImage->info().layout,
       dstImage->info().stages,
       dstImage->info().access);
 
     m_execBarriers.accessBuffer(srcSlice,
-       VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+      VK_PIPELINE_STAGE_TRANSFER_BIT,
       VK_ACCESS_TRANSFER_READ_BIT,
       srcBuffer->info().stages,
       srcBuffer->info().access);
@@ -617,7 +617,7 @@ namespace dxvk {
       imgInfo.mipLevels     = 1;
       imgInfo.usage         = VK_IMAGE_USAGE_TRANSFER_DST_BIT
                             | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-      imgInfo.stages        =  VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+      imgInfo.stages        = VK_PIPELINE_STAGE_TRANSFER_BIT;
       imgInfo.access        = VK_ACCESS_TRANSFER_WRITE_BIT
                             | VK_ACCESS_TRANSFER_READ_BIT;
       imgInfo.tiling        = dstImage->info().tiling;
@@ -683,9 +683,9 @@ namespace dxvk {
     m_execAcquires.accessImage(
       srcImage, srcSubresourceRange,
       srcImage->info().layout,
-       VK_PIPELINE_STAGE_2_TRANSFER_BIT, 0,
+      VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
       srcImageLayoutTransfer,
-       VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+      VK_PIPELINE_STAGE_TRANSFER_BIT,
       VK_ACCESS_TRANSFER_READ_BIT);
 
     m_execAcquires.recordCommands(m_cmd);
@@ -696,14 +696,14 @@ namespace dxvk {
     m_execBarriers.accessImage(
       srcImage, srcSubresourceRange,
       srcImageLayoutTransfer,
-       VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+      VK_PIPELINE_STAGE_TRANSFER_BIT,
       VK_ACCESS_TRANSFER_READ_BIT,
       srcImage->info().layout,
       srcImage->info().stages,
       srcImage->info().access);
 
     m_execBarriers.accessBuffer(dstSlice,
-       VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+      VK_PIPELINE_STAGE_TRANSFER_BIT,
       VK_ACCESS_TRANSFER_WRITE_BIT,
       dstBuffer->info().stages,
       dstBuffer->info().access);
@@ -773,9 +773,9 @@ namespace dxvk {
       m_execAcquires.accessImage(
         srcImage, subresourceRange,
         srcImage->info().layout,
-         VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, 0,
+        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0,
         layout,
-         VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
         VK_ACCESS_SHADER_READ_BIT);
       
       m_execAcquires.recordCommands(m_cmd);
@@ -809,7 +809,7 @@ namespace dxvk {
     
     m_execBarriers.accessImage(
       srcImage, subresourceRange, layout,
-       VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+      VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
       VK_ACCESS_SHADER_READ_BIT,
       srcImage->info().layout,
       srcImage->info().stages,
@@ -817,7 +817,7 @@ namespace dxvk {
     
     m_execBarriers.accessBuffer(
       dstBuffer->getSliceHandle(),
-       VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+      VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
       VK_ACCESS_SHADER_WRITE_BIT,
       dstBuffer->info().stages,
       dstBuffer->info().access);
@@ -887,8 +887,8 @@ namespace dxvk {
       bufferInfo.size   = srcBufferSlice.length;
       bufferInfo.usage  = VK_BUFFER_USAGE_TRANSFER_DST_BIT
                         | VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT;
-      bufferInfo.stages =  VK_PIPELINE_STAGE_2_TRANSFER_BIT
-                        |  VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+      bufferInfo.stages = VK_PIPELINE_STAGE_TRANSFER_BIT
+                        | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
       bufferInfo.access = VK_ACCESS_TRANSFER_WRITE_BIT
                         | VK_ACCESS_SHADER_READ_BIT;
       Rc<DxvkBuffer> tmpBuffer = m_device->createBuffer(bufferInfo, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
@@ -909,9 +909,9 @@ namespace dxvk {
       m_cmd->cmdCopyBuffer(DxvkCmdBuffer::ExecBuffer, &copyInfo);
 
       emitMemoryBarrier(
-         VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+        VK_PIPELINE_STAGE_TRANSFER_BIT,
         VK_ACCESS_TRANSFER_WRITE_BIT,
-         VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
         VK_ACCESS_SHADER_READ_BIT);
 
       viewInfo.rangeOffset = 0;
@@ -978,14 +978,14 @@ namespace dxvk {
     
     m_execBarriers.accessBuffer(
       dstView->getSliceHandle(),
-       VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+      VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
       VK_ACCESS_SHADER_WRITE_BIT,
       dstBuffer->info().stages,
       dstBuffer->info().access);
 
     m_execBarriers.accessBuffer(
       srcView->getSliceHandle(),
-       VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+      VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
       VK_ACCESS_SHADER_READ_BIT,
       srcBuffer->info().stages,
       srcBuffer->info().access);
@@ -1054,8 +1054,8 @@ namespace dxvk {
     tmpBufferInfo.size    = dataSizeD + dataSizeS;
     tmpBufferInfo.usage   = VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT
                           | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-    tmpBufferInfo.stages  =  VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT
-                          |  VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+    tmpBufferInfo.stages  = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT
+                          | VK_PIPELINE_STAGE_TRANSFER_BIT;
     tmpBufferInfo.access  = VK_ACCESS_SHADER_WRITE_BIT
                           | VK_ACCESS_TRANSFER_READ_BIT;
     
@@ -1112,14 +1112,14 @@ namespace dxvk {
     
     m_execBarriers.accessBuffer(
       tmpBuffer->getSliceHandle(),
-       VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+      VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
       VK_ACCESS_SHADER_WRITE_BIT,
-       VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+      VK_PIPELINE_STAGE_TRANSFER_BIT,
       VK_ACCESS_TRANSFER_READ_BIT);
 
     m_execBarriers.accessBuffer(
       srcBuffer->getSliceHandle(),
-       VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+      VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
       VK_ACCESS_SHADER_READ_BIT,
       srcBuffer->info().stages,
       srcBuffer->info().access);
@@ -1139,7 +1139,7 @@ namespace dxvk {
       dstImage->info().stages,
       dstImage->info().access,
       dstImage->pickLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL),
-       VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+      VK_PIPELINE_STAGE_TRANSFER_BIT,
       VK_ACCESS_TRANSFER_WRITE_BIT);
 
     m_execBarriers.recordCommands(m_cmd);
@@ -1176,7 +1176,7 @@ namespace dxvk {
     m_execBarriers.accessImage(
       dstImage, vk::makeSubresourceRange(dstSubresource),
       dstImage->pickLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL),
-       VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+      VK_PIPELINE_STAGE_TRANSFER_BIT,
       VK_ACCESS_TRANSFER_WRITE_BIT,
       dstImage->info().layout,
       dstImage->info().stages,
@@ -1285,7 +1285,7 @@ namespace dxvk {
         VK_QUERY_TYPE_PIPELINE_STATISTICS);
       
       m_execBarriers.accessBuffer(bufferSlice,
-         VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT,
+        VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT,
         VK_ACCESS_INDIRECT_COMMAND_READ_BIT,
         m_state.id.argBuffer.bufferInfo().stages,
         m_state.id.argBuffer.bufferInfo().access);
@@ -1432,7 +1432,7 @@ namespace dxvk {
       dxvk::align(slice.length, 4), 0);
 
     m_initBarriers.accessBuffer(slice,
-       VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+      VK_PIPELINE_STAGE_TRANSFER_BIT,
       VK_ACCESS_TRANSFER_WRITE_BIT,
       buffer->info().stages,
       buffer->info().access);
@@ -1448,7 +1448,7 @@ namespace dxvk {
     if (initialLayout == VK_IMAGE_LAYOUT_PREINITIALIZED) {
       m_initBarriers.accessImage(image, subresources,
         initialLayout,
-         VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT, 0,
+        VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0,
         image->info().layout,
         image->info().stages,
         image->info().access);
@@ -1459,9 +1459,9 @@ namespace dxvk {
 
       m_initBarriers.accessImage(image, subresources,
         initialLayout,
-         VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT, 0,
+        VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0,
         clearLayout,
-         VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+        VK_PIPELINE_STAGE_TRANSFER_BIT,
         VK_ACCESS_TRANSFER_WRITE_BIT);
 
       auto formatInfo = image->formatInfo();
@@ -1535,7 +1535,7 @@ namespace dxvk {
 
       m_execBarriers.accessImage(image, subresources,
         clearLayout,
-         VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+        VK_PIPELINE_STAGE_TRANSFER_BIT,
         VK_ACCESS_TRANSFER_WRITE_BIT,
         image->info().layout,
         image->info().stages,
@@ -1591,7 +1591,7 @@ namespace dxvk {
     m_initBarriers.accessImage(image,
       image->getAvailableSubresources(),
       VK_IMAGE_LAYOUT_UNDEFINED,
-       VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT, 0,
+      VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0,
       image->info().layout,
       image->info().stages,
       image->info().access);
@@ -1601,9 +1601,9 @@ namespace dxvk {
 
 
   void DxvkContext::emitGraphicsBarrier(
-          VkPipelineStageFlags2      srcStages,
+          VkPipelineStageFlags      srcStages,
           VkAccessFlags             srcAccess,
-          VkPipelineStageFlags2      dstStages,
+          VkPipelineStageFlags      dstStages,
           VkAccessFlags             dstAccess) {
     // Emit barrier early so we can fold this into
     // the spill render pass barrier if possible
@@ -1625,9 +1625,9 @@ namespace dxvk {
 
   void DxvkContext::emitBufferBarrier(
     const Rc<DxvkBuffer>&           resource,
-          VkPipelineStageFlags2      srcStages,
+          VkPipelineStageFlags      srcStages,
           VkAccessFlags             srcAccess,
-          VkPipelineStageFlags2      dstStages,
+          VkPipelineStageFlags      dstStages,
           VkAccessFlags             dstAccess) {
     this->spillRenderPass(true);
 
@@ -1641,10 +1641,10 @@ namespace dxvk {
   void DxvkContext::emitImageBarrier(
     const Rc<DxvkImage>&            resource,
           VkImageLayout             srcLayout,
-          VkPipelineStageFlags2      srcStages,
+          VkPipelineStageFlags      srcStages,
           VkAccessFlags             srcAccess,
           VkImageLayout             dstLayout,
-          VkPipelineStageFlags2      dstStages,
+          VkPipelineStageFlags      dstStages,
           VkAccessFlags             dstAccess) {
     this->spillRenderPass(true);
     this->prepareImage(resource, resource->getAvailableSubresources());
@@ -1686,7 +1686,7 @@ namespace dxvk {
         imageView->imageInfo().layout,
         imageView->imageInfo().stages, 0,
         srcLayout,
-         VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
         VK_ACCESS_SHADER_READ_BIT);
     }
 
@@ -1697,7 +1697,7 @@ namespace dxvk {
         VK_IMAGE_LAYOUT_UNDEFINED,
         imageView->imageInfo().stages, 0,
         dstLayout,
-         VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
         VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
     }
 
@@ -1767,10 +1767,10 @@ namespace dxvk {
         m_execAcquires.accessImage(imageView->image(),
           mipGenerator->getSourceSubresource(i),
           dstLayout,
-           VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+          VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
           VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
           srcLayout,
-           VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+          VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
           VK_ACCESS_SHADER_READ_BIT);
         m_execAcquires.recordCommands(m_cmd);
       }
@@ -1799,8 +1799,8 @@ namespace dxvk {
       m_execBarriers.accessImage(imageView->image(),
         imageView->imageSubresources(),
         srcLayout,
-         VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT |
-         VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
+        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
         VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
         VK_ACCESS_SHADER_READ_BIT,
         imageView->imageInfo().layout,
@@ -1810,8 +1810,8 @@ namespace dxvk {
       m_execBarriers.accessImage(imageView->image(),
         mipGenerator->getAllSourceSubresources(),
         srcLayout,
-         VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT |
-         VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
+        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
         VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
         VK_ACCESS_SHADER_READ_BIT,
         imageView->imageInfo().layout,
@@ -1821,7 +1821,7 @@ namespace dxvk {
       m_execBarriers.accessImage(imageView->image(),
         mipGenerator->getBottomSubresource(),
         dstLayout,
-         VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
         VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
         imageView->imageInfo().layout,
         imageView->imageInfo().stages,
@@ -2066,11 +2066,11 @@ namespace dxvk {
       VkImageLayout loadLayout;
       VkImageLayout storeLayout;
 
-      VkPipelineStageFlags2 clearStages = 0;
+      VkPipelineStageFlags clearStages = 0;
       VkAccessFlags        clearAccess = 0;
       
       if ((clearAspects | discardAspects) & VK_IMAGE_ASPECT_COLOR_BIT) {
-        clearStages |=  VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+        clearStages |= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
         clearAccess |= VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
         attachmentInfo.loadOp = colorOp.loadOp;
@@ -2081,8 +2081,8 @@ namespace dxvk {
         loadLayout = colorOp.loadLayout;
         storeLayout = colorOp.storeLayout;
       } else {
-        clearStages |=  VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT
-                    |   VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
+        clearStages |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT
+                    |  VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
         clearAccess |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
         if (imageView->info().aspect & VK_IMAGE_ASPECT_DEPTH_BIT) {
@@ -2260,7 +2260,7 @@ namespace dxvk {
       : m_execBarriers;
 
     barriers.accessBuffer(bufferSlice,
-       VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+      VK_PIPELINE_STAGE_TRANSFER_BIT,
       VK_ACCESS_TRANSFER_WRITE_BIT,
       buffer->info().stages,
       buffer->info().access);
@@ -2290,7 +2290,7 @@ namespace dxvk {
     DxvkBufferCreateInfo tmpBufferInfo;
     tmpBufferInfo.size      = pixelCount * formatInfo->elementSize;
     tmpBufferInfo.usage     = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-    tmpBufferInfo.stages    =  VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+    tmpBufferInfo.stages    = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
     tmpBufferInfo.access    = VK_ACCESS_SHADER_READ_BIT;
 
     auto tmpBuffer = m_device->createBuffer(tmpBufferInfo,
@@ -2333,7 +2333,7 @@ namespace dxvk {
     m_sdmaBarriers.releaseBuffer(
       m_initBarriers, bufferSlice,
       m_device->queues().transfer.queueFamily,
-       VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+      VK_PIPELINE_STAGE_TRANSFER_BIT,
       VK_ACCESS_TRANSFER_WRITE_BIT,
       m_device->queues().graphics.queueFamily,
       buffer->info().stages,
@@ -2365,9 +2365,9 @@ namespace dxvk {
     barriers->accessImage(image,
       vk::makeSubresourceRange(subresources),
       VK_IMAGE_LAYOUT_UNDEFINED,
-       VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT, 0,
+      VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0,
       image->pickLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL),
-       VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+      VK_PIPELINE_STAGE_TRANSFER_BIT,
       VK_ACCESS_TRANSFER_WRITE_BIT);
 
     barriers->recordCommands(m_cmd);
@@ -2382,7 +2382,7 @@ namespace dxvk {
         image, vk::makeSubresourceRange(subresources),
         m_device->queues().transfer.queueFamily,
         image->pickLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL),
-         VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+        VK_PIPELINE_STAGE_TRANSFER_BIT,
         VK_ACCESS_TRANSFER_WRITE_BIT,
         m_device->queues().graphics.queueFamily,
         image->info().layout,
@@ -2392,7 +2392,7 @@ namespace dxvk {
       barriers->accessImage(image,
         vk::makeSubresourceRange(subresources),
         image->pickLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL),
-         VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+        VK_PIPELINE_STAGE_TRANSFER_BIT,
         VK_ACCESS_TRANSFER_WRITE_BIT,
         image->info().layout,
         image->info().stages,
@@ -2721,7 +2721,7 @@ namespace dxvk {
     // without triggering a queue submission first, so we really only need
     // to wait for prior commands, especially queries, to complete.
     VkMemoryBarrier2 barrier = { VK_STRUCTURE_TYPE_MEMORY_BARRIER_2 };
-    barrier.srcStageMask =  VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT;
+    barrier.srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
 
     VkDependencyInfo depInfo = { VK_STRUCTURE_TYPE_DEPENDENCY_INFO };
     depInfo.memoryBarrierCount = 1;
@@ -2743,7 +2743,7 @@ namespace dxvk {
     // since they're being used bindlessly.
     this->spillRenderPass(true);
 
-    VkPipelineStageFlags2 srcStages = 0;
+    VkPipelineStageFlags srcStages = 0;
     VkAccessFlags srcAccess = 0;
 
     for (auto& r : buffers) {
@@ -2759,7 +2759,7 @@ namespace dxvk {
     }
 
     m_execBarriers.accessMemory(srcStages, srcAccess,
-       VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+      VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
       VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
     m_execBarriers.recordCommands(m_cmd);
 
@@ -2770,7 +2770,7 @@ namespace dxvk {
                                 | (r.second.test(DxvkAccess::Write) * VK_ACCESS_SHADER_WRITE_BIT);
       DxvkBufferSliceHandle bufferSlice = r.first->getSliceHandle();
       m_execBarriers.accessBuffer(bufferSlice,
-         VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
         accessFlags,
         r.first->info().stages,
         r.first->info().access);
@@ -2782,7 +2782,7 @@ namespace dxvk {
       m_execBarriers.accessImage(r.first,
         r.first->getAvailableSubresources(),
         r.first->info().layout,
-         VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
         accessFlags,
         r.first->info().layout,
         r.first->info().stages,
@@ -2873,7 +2873,7 @@ namespace dxvk {
         dstImage->info().layout,
         dstImage->info().stages, 0,
         dstLayout,
-         VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
         VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
         VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
     }
@@ -2884,7 +2884,7 @@ namespace dxvk {
         srcImage->info().layout,
         srcImage->info().stages, 0,
         srcLayout,
-         VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
         VK_ACCESS_SHADER_READ_BIT);
     }
 
@@ -3004,7 +3004,7 @@ namespace dxvk {
     m_execBarriers.accessImage(dstImage,
       vk::makeSubresourceRange(region.dstSubresource),
       dstLayout,
-       VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+      VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
       VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
       dstImage->info().layout,
       dstImage->info().stages,
@@ -3013,7 +3013,7 @@ namespace dxvk {
     m_execBarriers.accessImage(srcImage,
       vk::makeSubresourceRange(region.srcSubresource),
       srcLayout,
-       VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+      VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
       VK_ACCESS_SHADER_READ_BIT,
       srcImage->info().layout,
       srcImage->info().stages,
@@ -3045,9 +3045,9 @@ namespace dxvk {
       m_execAcquires.accessImage(
         dstImage, dstSubresourceRange,
         dstImage->info().layout,
-         VK_PIPELINE_STAGE_2_TRANSFER_BIT, 0,
+        VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
         dstLayout,
-         VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+        VK_PIPELINE_STAGE_TRANSFER_BIT,
         VK_ACCESS_TRANSFER_WRITE_BIT);
     }
 
@@ -3055,9 +3055,9 @@ namespace dxvk {
       m_execAcquires.accessImage(
         srcImage, srcSubresourceRange,
         srcImage->info().layout,
-         VK_PIPELINE_STAGE_2_TRANSFER_BIT, 0,
+        VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
         srcLayout,
-         VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+        VK_PIPELINE_STAGE_TRANSFER_BIT,
         VK_ACCESS_TRANSFER_READ_BIT);
     }
 
@@ -3086,7 +3086,7 @@ namespace dxvk {
     
     m_execBarriers.accessImage(
       dstImage, dstSubresourceRange, dstLayout,
-       VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+      VK_PIPELINE_STAGE_TRANSFER_BIT,
       VK_ACCESS_TRANSFER_WRITE_BIT,
       dstImage->info().layout,
       dstImage->info().stages,
@@ -3094,7 +3094,7 @@ namespace dxvk {
     
     m_execBarriers.accessImage(
       srcImage, srcSubresourceRange, srcLayout,
-       VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+      VK_PIPELINE_STAGE_TRANSFER_BIT,
       VK_ACCESS_TRANSFER_READ_BIT,
       srcImage->info().layout,
       srcImage->info().stages,
@@ -3261,7 +3261,7 @@ namespace dxvk {
           VkClearValue          value) {
     this->updateFramebuffer();
 
-    VkPipelineStageFlags2 clearStages = 0;
+    VkPipelineStageFlags clearStages = 0;
     VkAccessFlags clearAccess = 0;
     VkImageLayout clearLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
@@ -3298,15 +3298,15 @@ namespace dxvk {
       renderingInfo.layerCount = imageView->info().numLayers;
 
       if (imageView->info().aspect & VK_IMAGE_ASPECT_COLOR_BIT) {
-        clearStages |=  VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+        clearStages |= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
         clearAccess |= VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT
                     |  VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
 
         renderingInfo.colorAttachmentCount = 1;
         renderingInfo.pColorAttachments = &attachmentInfo;
       } else {
-        clearStages |=  VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT
-                    |   VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
+        clearStages |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT
+                    |  VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
         clearAccess |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT
                     |  VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
 
@@ -3441,7 +3441,7 @@ namespace dxvk {
       imageView->image(),
       imageView->imageSubresources(),
       imageView->imageInfo().layout,
-       VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+      VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
       VK_ACCESS_SHADER_WRITE_BIT,
       imageView->imageInfo().layout,
       imageView->imageInfo().stages,
@@ -3481,9 +3481,9 @@ namespace dxvk {
       m_execAcquires.accessImage(
         dstImage, dstSubresourceRange,
         dstInitImageLayout,
-         VK_PIPELINE_STAGE_2_TRANSFER_BIT, 0,
+        VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
         dstImageLayout,
-         VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+        VK_PIPELINE_STAGE_TRANSFER_BIT,
         VK_ACCESS_TRANSFER_WRITE_BIT);
     }
 
@@ -3491,9 +3491,9 @@ namespace dxvk {
       m_execAcquires.accessImage(
         srcImage, srcSubresourceRange,
         srcImage->info().layout,
-         VK_PIPELINE_STAGE_2_TRANSFER_BIT, 0,
+        VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
         srcImageLayout,
-         VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+        VK_PIPELINE_STAGE_TRANSFER_BIT,
         VK_ACCESS_TRANSFER_READ_BIT);
     }
 
@@ -3535,7 +3535,7 @@ namespace dxvk {
     m_execBarriers.accessImage(
       dstImage, dstSubresourceRange,
       dstImageLayout,
-       VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+      VK_PIPELINE_STAGE_TRANSFER_BIT,
       VK_ACCESS_TRANSFER_WRITE_BIT,
       dstImage->info().layout,
       dstImage->info().stages,
@@ -3544,7 +3544,7 @@ namespace dxvk {
     m_execBarriers.accessImage(
       srcImage, srcSubresourceRange,
       srcImageLayout,
-       VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+      VK_PIPELINE_STAGE_TRANSFER_BIT,
       VK_ACCESS_TRANSFER_READ_BIT,
       srcImage->info().layout,
       srcImage->info().stages,
@@ -3595,18 +3595,18 @@ namespace dxvk {
       imageInfo.mipLevels = 1;
       imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
       imageInfo.layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-      imageInfo.stages =  VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+      imageInfo.stages = VK_PIPELINE_STAGE_TRANSFER_BIT;
       imageInfo.access = VK_ACCESS_TRANSFER_READ_BIT;
       imageInfo.viewFormatCount = 0;
 
       if (dstImage->formatInfo()->aspectMask & VK_IMAGE_ASPECT_COLOR_BIT) {
         imageInfo.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-        imageInfo.stages |=  VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+        imageInfo.stages |= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
         imageInfo.access |= VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
       } else {
         imageInfo.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-        imageInfo.stages |=  VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT
-                         |   VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
+        imageInfo.stages |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT
+                         |  VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
         imageInfo.access |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
       }
 
@@ -3653,21 +3653,21 @@ namespace dxvk {
 
     // This function can process both color and depth-stencil images, so
     // some things change a lot depending on the destination image type
-    VkPipelineStageFlags2 dstStages;
+    VkPipelineStageFlags dstStages;
     VkAccessFlags dstAccess;
     VkImageLayout dstLayout;
 
     if (dstSubresource.aspectMask & VK_IMAGE_ASPECT_COLOR_BIT) {
       dstLayout = dstImage->pickLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-      dstStages =  VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+      dstStages = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
       dstAccess = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
       if (!doDiscard)
         dstAccess |= VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
     } else {
       dstLayout = dstImage->pickLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-      dstStages =  VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT
-                |  VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
+      dstStages = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT
+                | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
       dstAccess = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
       if (!doDiscard)
@@ -3685,7 +3685,7 @@ namespace dxvk {
         srcImage->info().layout,
         srcImage->info().stages, 0,
         srcLayout,
-         VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
         VK_ACCESS_SHADER_READ_BIT);
     }
 
@@ -3798,7 +3798,7 @@ namespace dxvk {
 
     m_execBarriers.accessImage(
       srcImage, srcSubresourceRange, srcLayout,
-       VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+      VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
       VK_ACCESS_SHADER_READ_BIT,
       srcImage->info().layout,
       srcImage->info().stages,
@@ -3955,13 +3955,13 @@ namespace dxvk {
       m_cmd->cmdCopyBuffer(DxvkCmdBuffer::ExecBuffer, &info);
 
     m_execBarriers.accessBuffer(sparseHandle,
-       VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+      VK_PIPELINE_STAGE_TRANSFER_BIT,
       ToBuffer ? VK_ACCESS_TRANSFER_READ_BIT : VK_ACCESS_TRANSFER_WRITE_BIT,
       sparse->info().stages,
       sparse->info().access);
 
     m_execBarriers.accessBuffer(bufferHandle,
-       VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+      VK_PIPELINE_STAGE_TRANSFER_BIT,
       ToBuffer ? VK_ACCESS_TRANSFER_WRITE_BIT : VK_ACCESS_TRANSFER_READ_BIT,
       buffer->info().stages,
       buffer->info().access);
@@ -4003,7 +4003,7 @@ namespace dxvk {
         sparse->info().layout,
         sparse->info().stages, 0,
         transferLayout,
-         VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+        VK_PIPELINE_STAGE_TRANSFER_BIT,
         transferAccess);
 
       m_execAcquires.recordCommands(m_cmd);
@@ -4049,14 +4049,14 @@ namespace dxvk {
 
     m_execBarriers.accessImage(sparse, sparseSubresources,
       transferLayout,
-       VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+      VK_PIPELINE_STAGE_TRANSFER_BIT,
       transferAccess,
       sparse->info().layout,
       sparse->info().stages,
       sparse->info().access);
 
     m_execBarriers.accessBuffer(bufferHandle,
-       VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+      VK_PIPELINE_STAGE_TRANSFER_BIT,
       ToBuffer ? VK_ACCESS_TRANSFER_WRITE_BIT : VK_ACCESS_TRANSFER_READ_BIT,
       buffer->info().stages,
       buffer->info().access);
@@ -4090,9 +4090,9 @@ namespace dxvk {
     if (dstLayout != initialLayout) {
       m_execAcquires.accessImage(
         dstImage, dstSubresourceRange, initialLayout,
-         VK_PIPELINE_STAGE_2_TRANSFER_BIT, 0,
+        VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
         dstLayout,
-         VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+        VK_PIPELINE_STAGE_TRANSFER_BIT,
         VK_ACCESS_TRANSFER_WRITE_BIT);
     }
 
@@ -4100,9 +4100,9 @@ namespace dxvk {
       m_execAcquires.accessImage(
         srcImage, srcSubresourceRange,
         srcImage->info().layout,
-         VK_PIPELINE_STAGE_2_TRANSFER_BIT, 0,
+        VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
         srcLayout,
-         VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+        VK_PIPELINE_STAGE_TRANSFER_BIT,
         VK_ACCESS_TRANSFER_READ_BIT);
     }
 
@@ -4127,7 +4127,7 @@ namespace dxvk {
   
     m_execBarriers.accessImage(
       dstImage, dstSubresourceRange, dstLayout,
-       VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+      VK_PIPELINE_STAGE_TRANSFER_BIT,
       VK_ACCESS_TRANSFER_WRITE_BIT,
       dstImage->info().layout,
       dstImage->info().stages,
@@ -4135,7 +4135,7 @@ namespace dxvk {
 
     m_execBarriers.accessImage(
       srcImage, srcSubresourceRange, srcLayout,
-       VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+      VK_PIPELINE_STAGE_TRANSFER_BIT,
       VK_ACCESS_TRANSFER_READ_BIT,
       srcImage->info().layout,
       srcImage->info().stages,
@@ -4173,8 +4173,8 @@ namespace dxvk {
         srcImage->info().layout,
         srcImage->info().stages, 0,
         srcLayout,
-         VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT |
-         VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT,
+        VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT |
+        VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
         VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT);
     }
 
@@ -4182,8 +4182,8 @@ namespace dxvk {
       m_execAcquires.accessImage(dstImage, dstSubresourceRange,
         VK_IMAGE_LAYOUT_UNDEFINED, dstImage->info().stages, 0,
         dstLayout,
-         VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT |
-         VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT,
+        VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT |
+        VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
         VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT);
     }
 
@@ -4225,8 +4225,8 @@ namespace dxvk {
     // Add barriers for the resolve operation
     m_execBarriers.accessImage(srcImage, srcSubresourceRange,
       srcLayout,
-       VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT |
-       VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT,
+      VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT |
+      VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
       VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT,
       srcImage->info().layout,
       srcImage->info().stages,
@@ -4234,8 +4234,8 @@ namespace dxvk {
 
     m_execBarriers.accessImage(dstImage, dstSubresourceRange,
       dstLayout,
-       VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT |
-       VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT,
+      VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT |
+      VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
       VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
       dstImage->info().layout,
       dstImage->info().stages,
@@ -4272,21 +4272,21 @@ namespace dxvk {
     if (region.dstSubresource.aspectMask & VK_IMAGE_ASPECT_STENCIL_BIT)
       doDiscard &= stencilMode != VK_RESOLVE_MODE_NONE;
 
-    VkPipelineStageFlags2 dstStages;
+    VkPipelineStageFlags dstStages;
     VkImageLayout dstLayout;
     VkAccessFlags dstAccess;
 
     if (region.dstSubresource.aspectMask & VK_IMAGE_ASPECT_COLOR_BIT) {
       dstLayout = dstImage->pickLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-      dstStages =  VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+      dstStages = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
       dstAccess = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
       if (!doDiscard)
         dstAccess |= VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
     } else {
       dstLayout = dstImage->pickLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-      dstStages =  VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT
-                |  VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
+      dstStages = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT
+                | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
       dstAccess = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
       if (!doDiscard)
@@ -4318,7 +4318,7 @@ namespace dxvk {
         srcImage->info().layout,
         srcImage->info().stages, 0,
         srcLayout,
-         VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
         VK_ACCESS_SHADER_READ_BIT);
     }
 
@@ -4418,7 +4418,7 @@ namespace dxvk {
 
     m_execBarriers.accessImage(
       srcImage, srcSubresourceRange, srcLayout,
-       VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, 0,
+      VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
       srcImage->info().layout,
       srcImage->info().stages,
       srcImage->info().access);
@@ -4464,7 +4464,7 @@ namespace dxvk {
       imageInfo.numLayers = region.dstSubresource.layerCount;
       imageInfo.mipLevels = 1;
       imageInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-      imageInfo.stages =  VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT |  VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+      imageInfo.stages = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT;
       imageInfo.access = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_TRANSFER_READ_BIT;
       imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
       imageInfo.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
@@ -4592,9 +4592,9 @@ namespace dxvk {
      && depthAttachment.view != nullptr) {
       VkImageAspectFlags depthAspects = depthAttachment.view->info().aspect;
 
-      VkPipelineStageFlags2 depthStages =
-         VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT |
-         VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
+      VkPipelineStageFlags depthStages =
+        VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT |
+        VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
       VkAccessFlags depthAccess = 0;
 
       if (((depthAspects & VK_IMAGE_ASPECT_DEPTH_BIT) && ops.depthOps.loadOpD == VK_ATTACHMENT_LOAD_OP_LOAD)
@@ -4634,9 +4634,9 @@ namespace dxvk {
           colorAttachment.view->image(),
           colorAttachment.view->imageSubresources(),
           ops.colorOps[i].loadLayout,
-           VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, 0,
+          VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0,
           colorAttachment.layout,
-           VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+          VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
           colorAccess);
       }
     }
@@ -4659,8 +4659,8 @@ namespace dxvk {
           depthAttachment.view->image(),
           depthAttachment.view->imageSubresources(),
           depthAttachment.layout,
-           VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT |
-           VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT,
+          VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT |
+          VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
           VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
           VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
           ops.depthOps.storeLayout,
@@ -4673,8 +4673,8 @@ namespace dxvk {
           srcAccess |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
         m_execBarriers.accessMemory(
-           VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT |
-           VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT,
+          VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT |
+          VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
           srcAccess,
           depthAttachment.view->imageInfo().stages,
           depthAttachment.view->imageInfo().access);
@@ -4690,7 +4690,7 @@ namespace dxvk {
             colorAttachment.view->image(),
             colorAttachment.view->imageSubresources(),
             colorAttachment.layout,
-             VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
             VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
             VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
             ops.colorOps[i].storeLayout,
@@ -4698,7 +4698,7 @@ namespace dxvk {
             colorAttachment.view->imageInfo().access);
         } else {
           m_execBarriers.accessMemory(
-             VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
             VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
             VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
             colorAttachment.view->imageInfo().stages,
@@ -5454,7 +5454,7 @@ namespace dxvk {
       m_execBarriers.accessImage(
         attachment.view->image(),
         attachment.view->imageSubresources(), oldLayout,
-         VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
         VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
         attachment.view->imageInfo().layout,
         attachment.view->imageInfo().stages,
@@ -5472,8 +5472,8 @@ namespace dxvk {
       m_execBarriers.accessImage(
         attachment.view->image(),
         attachment.view->imageSubresources(), oldLayout,
-         VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT |
-         VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT,
+        VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT |
+        VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
         oldLayout != VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL
           ? VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT : 0,
         attachment.view->imageInfo().layout,
@@ -5937,12 +5937,12 @@ namespace dxvk {
       DxvkGlobalPipelineBarrier barrier = { };
 
       if (Indexed) {
-        barrier.stages |=  VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT;
+        barrier.stages |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
         barrier.access |= VK_ACCESS_INDEX_READ_BIT;
       }
 
       if (Indirect) {
-        barrier.stages |=  VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT;
+        barrier.stages |= VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT;
         barrier.access |= VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
       }
 
@@ -5991,7 +5991,7 @@ namespace dxvk {
           case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
             if (likely(slot.bufferSlice.length())) {
               requiresBarrier = this->checkBufferBarrier<DoEmit>(slot.bufferSlice,
-                 VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, binding.access);
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, binding.access);
             }
             break;
 
@@ -5999,7 +5999,7 @@ namespace dxvk {
           case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
             if (likely(slot.bufferView != nullptr)) {
               requiresBarrier = this->checkBufferViewBarrier<DoEmit>(slot.bufferView,
-                 VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, binding.access);
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, binding.access);
             }
             break;
 
@@ -6008,7 +6008,7 @@ namespace dxvk {
           case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
             if (likely(slot.imageView != nullptr)) {
               requiresBarrier = this->checkImageViewBarrier<DoEmit>(slot.imageView,
-                 VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, binding.access);
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, binding.access);
             }
             break;
 
@@ -6046,7 +6046,7 @@ namespace dxvk {
         if ((slices[i]->length())
          && (slices[i]->bufferInfo().access & storageBufferAccess)) {
           requiresBarrier = this->checkBufferBarrier<DoEmit>(*slices[i],
-             VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT,
+            VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT,
             VK_ACCESS_INDIRECT_COMMAND_READ_BIT);
         }
       }
@@ -6060,7 +6060,7 @@ namespace dxvk {
       if ((indexBufferSlice.length())
        && (indexBufferSlice.bufferInfo().access & storageBufferAccess)) {
         requiresBarrier = this->checkBufferBarrier<DoEmit>(indexBufferSlice,
-           VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT,
+          VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
           VK_ACCESS_INDEX_READ_BIT);
       }
     }
@@ -6076,7 +6076,7 @@ namespace dxvk {
         if ((vertexBufferSlice.length())
          && (vertexBufferSlice.bufferInfo().access & storageBufferAccess)) {
           requiresBarrier = this->checkBufferBarrier<DoEmit>(vertexBufferSlice,
-             VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT,
+            VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
             VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT);
         }
       }
@@ -6092,13 +6092,13 @@ namespace dxvk {
 
         if (xfbBufferSlice.length()) {
           requiresBarrier = this->checkBufferBarrier<DoEmit>(xfbBufferSlice,
-             VK_PIPELINE_STAGE_2_TRANSFORM_FEEDBACK_BIT_EXT,
+            VK_PIPELINE_STAGE_TRANSFORM_FEEDBACK_BIT_EXT,
             VK_ACCESS_TRANSFORM_FEEDBACK_WRITE_BIT_EXT);
 
           if (xfbCounterSlice.length()) {
             requiresBarrier |= this->checkBufferBarrier<DoEmit>(xfbCounterSlice,
-               VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT |
-               VK_PIPELINE_STAGE_2_TRANSFORM_FEEDBACK_BIT_EXT,
+              VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT |
+              VK_PIPELINE_STAGE_TRANSFORM_FEEDBACK_BIT_EXT,
               VK_ACCESS_TRANSFORM_FEEDBACK_COUNTER_READ_BIT_EXT |
               VK_ACCESS_TRANSFORM_FEEDBACK_COUNTER_WRITE_BIT_EXT);
           }
@@ -6163,7 +6163,7 @@ namespace dxvk {
   template<bool DoEmit>
   bool DxvkContext::checkBufferBarrier(
     const DxvkBufferSlice&          bufferSlice,
-          VkPipelineStageFlags2      stages,
+          VkPipelineStageFlags      stages,
           VkAccessFlags             access) {
     if constexpr (DoEmit) {
       m_execBarriers.accessBuffer(
@@ -6190,7 +6190,7 @@ namespace dxvk {
   template<bool DoEmit>
   bool DxvkContext::checkBufferViewBarrier(
     const Rc<DxvkBufferView>&       bufferView,
-          VkPipelineStageFlags2      stages,
+          VkPipelineStageFlags      stages,
           VkAccessFlags             access) {
     if constexpr (DoEmit) {
       m_execBarriers.accessBuffer(
@@ -6217,7 +6217,7 @@ namespace dxvk {
   template<bool DoEmit>
   bool DxvkContext::checkImageViewBarrier(
     const Rc<DxvkImageView>&        imageView,
-          VkPipelineStageFlags2      stages,
+          VkPipelineStageFlags      stages,
           VkAccessFlags             access) {
     if constexpr (DoEmit) {
       m_execBarriers.accessImage(
@@ -6247,12 +6247,12 @@ namespace dxvk {
   }
 
 
-  bool DxvkContext::canIgnoreWawHazards(VkPipelineStageFlags2 stages) {
+  bool DxvkContext::canIgnoreWawHazards(VkPipelineStageFlags stages) {
     if (!m_barrierControl.test(DxvkBarrierControl::IgnoreWriteAfterWrite))
       return false;
 
     if (stages & VK_SHADER_STAGE_COMPUTE_BIT) {
-      VkPipelineStageFlags2 stageMask =  VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT |  VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT;
+      VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT;
       return !(m_execBarriers.getSrcStages() & ~stageMask);
     }
 
@@ -6261,9 +6261,9 @@ namespace dxvk {
 
 
   void DxvkContext::emitMemoryBarrier(
-          VkPipelineStageFlags2      srcStages,
+          VkPipelineStageFlags      srcStages,
           VkAccessFlags             srcAccess,
-          VkPipelineStageFlags2      dstStages,
+          VkPipelineStageFlags      dstStages,
           VkAccessFlags             dstAccess) {
     VkMemoryBarrier2 barrier = { VK_STRUCTURE_TYPE_MEMORY_BARRIER_2 };
     barrier.srcStageMask = srcStages;
@@ -6355,7 +6355,7 @@ namespace dxvk {
     bufInfo.size    = align<VkDeviceSize>(size, 1 << 20);
     bufInfo.usage   = VK_BUFFER_USAGE_TRANSFER_DST_BIT
                     | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-    bufInfo.stages  =  VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+    bufInfo.stages  = VK_PIPELINE_STAGE_TRANSFER_BIT;
     bufInfo.access  = VK_ACCESS_TRANSFER_WRITE_BIT
                     | VK_ACCESS_TRANSFER_READ_BIT;
 

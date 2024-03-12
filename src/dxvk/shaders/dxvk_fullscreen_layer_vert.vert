@@ -1,4 +1,4 @@
-#version 460
+#version 450
 
 #extension GL_ARB_shader_viewport_layer_array : enable
 

@@ -19,19 +19,19 @@ namespace dxvk {
     info.size   = pDesc->ByteWidth;
     info.usage  = VK_BUFFER_USAGE_TRANSFER_SRC_BIT
                 | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-    info.stages =  VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+    info.stages = VK_PIPELINE_STAGE_TRANSFER_BIT;
     info.access = VK_ACCESS_TRANSFER_READ_BIT
                 | VK_ACCESS_TRANSFER_WRITE_BIT;
     
     if (pDesc->BindFlags & D3D11_BIND_VERTEX_BUFFER) {
       info.usage  |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-      info.stages |=  VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT;
+      info.stages |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
       info.access |= VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
     }
     
     if (pDesc->BindFlags & D3D11_BIND_INDEX_BUFFER) {
       info.usage  |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-      info.stages |=  VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT;
+      info.stages |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
       info.access |= VK_ACCESS_INDEX_READ_BIT;
     }
     
@@ -50,7 +50,7 @@ namespace dxvk {
     
     if (pDesc->BindFlags & D3D11_BIND_STREAM_OUTPUT) {
       info.usage  |= VK_BUFFER_USAGE_TRANSFORM_FEEDBACK_BUFFER_BIT_EXT;
-      info.stages |=  VK_PIPELINE_STAGE_2_TRANSFORM_FEEDBACK_BIT_EXT;
+      info.stages |= VK_PIPELINE_STAGE_TRANSFORM_FEEDBACK_BIT_EXT;
       info.access |= VK_ACCESS_TRANSFORM_FEEDBACK_WRITE_BIT_EXT;
     }
     
@@ -64,7 +64,7 @@ namespace dxvk {
     
     if (pDesc->MiscFlags & D3D11_RESOURCE_MISC_DRAWINDIRECT_ARGS) {
       info.usage  |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
-      info.stages |=  VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT;
+      info.stages |= VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT;
       info.access |= VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
     }
 
@@ -77,7 +77,7 @@ namespace dxvk {
     // Set host read bit as necessary. We may internally read staging
     // buffer contents even if the buffer is not marked for reading.
     if (pDesc->CPUAccessFlags && pDesc->Usage != D3D11_USAGE_DYNAMIC) {
-      info.stages |=  VK_PIPELINE_STAGE_2_HOST_BIT;
+      info.stages |= VK_PIPELINE_STAGE_HOST_BIT;
       info.access |= VK_ACCESS_HOST_READ_BIT;
 
       if (pDesc->CPUAccessFlags & D3D11_CPU_ACCESS_WRITE)
@@ -357,9 +357,9 @@ namespace dxvk {
                 | VK_BUFFER_USAGE_TRANSFER_SRC_BIT
                 | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT
                 | VK_BUFFER_USAGE_TRANSFORM_FEEDBACK_COUNTER_BUFFER_BIT_EXT;
-    info.stages =  VK_PIPELINE_STAGE_2_TRANSFER_BIT
-                |  VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT
-                |  VK_PIPELINE_STAGE_2_TRANSFORM_FEEDBACK_BIT_EXT;
+    info.stages = VK_PIPELINE_STAGE_TRANSFER_BIT
+                | VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT
+                | VK_PIPELINE_STAGE_TRANSFORM_FEEDBACK_BIT_EXT;
     info.access = VK_ACCESS_TRANSFER_READ_BIT
                 | VK_ACCESS_TRANSFER_WRITE_BIT
                 | VK_ACCESS_INDIRECT_COMMAND_READ_BIT

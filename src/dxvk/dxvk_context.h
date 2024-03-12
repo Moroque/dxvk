@@ -868,9 +868,9 @@ namespace dxvk {
      * \param [in] dstAccess Destination access
      */
     void emitGraphicsBarrier(
-            VkPipelineStageFlags2      srcStages,
+            VkPipelineStageFlags      srcStages,
             VkAccessFlags             srcAccess,
-            VkPipelineStageFlags2      dstStages,
+            VkPipelineStageFlags      dstStages,
             VkAccessFlags             dstAccess);
 
     /**
@@ -886,9 +886,9 @@ namespace dxvk {
      */
     void emitBufferBarrier(
       const Rc<DxvkBuffer>&           resource,
-            VkPipelineStageFlags2      srcStages,
+            VkPipelineStageFlags      srcStages,
             VkAccessFlags             srcAccess,
-            VkPipelineStageFlags2      dstStages,
+            VkPipelineStageFlags      dstStages,
             VkAccessFlags             dstAccess);
 
     /**
@@ -907,10 +907,10 @@ namespace dxvk {
     void emitImageBarrier(
       const Rc<DxvkImage>&            resource,
             VkImageLayout             srcLayout,
-            VkPipelineStageFlags2      srcStages,
+            VkPipelineStageFlags      srcStages,
             VkAccessFlags             srcAccess,
             VkImageLayout             dstLayout,
-            VkPipelineStageFlags2      dstStages,
+            VkPipelineStageFlags      dstStages,
             VkAccessFlags             dstAccess);
 
     /**
@@ -1691,28 +1691,28 @@ namespace dxvk {
     template<bool DoEmit>
     bool checkBufferBarrier(
       const DxvkBufferSlice&          bufferSlice,
-            VkPipelineStageFlags2      stages,
+            VkPipelineStageFlags      stages,
             VkAccessFlags             access);
 
     template<bool DoEmit>
     bool checkBufferViewBarrier(
       const Rc<DxvkBufferView>&       bufferView,
-            VkPipelineStageFlags2      stages,
+            VkPipelineStageFlags      stages,
             VkAccessFlags             access);
 
     template<bool DoEmit>
     bool checkImageViewBarrier(
       const Rc<DxvkImageView>&        imageView,
-            VkPipelineStageFlags2      stages,
+            VkPipelineStageFlags      stages,
             VkAccessFlags             access);
 
     bool canIgnoreWawHazards(
-            VkPipelineStageFlags2      stages);
+            VkPipelineStageFlags      stages);
 
     void emitMemoryBarrier(
-            VkPipelineStageFlags2      srcStages,
+            VkPipelineStageFlags      srcStages,
             VkAccessFlags             srcAccess,
-            VkPipelineStageFlags2      dstStages,
+            VkPipelineStageFlags      dstStages,
             VkAccessFlags             dstAccess);
     
     void trackDrawBuffer();

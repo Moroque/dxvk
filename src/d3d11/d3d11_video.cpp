@@ -177,7 +177,7 @@ namespace dxvk {
       DxvkImageCreateInfo info = dxvkImage->info();
       info.flags  = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT | VK_IMAGE_CREATE_EXTENDED_USAGE_BIT;
       info.usage  = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-      info.stages =  VK_PIPELINE_STAGE_2_TRANSFER_BIT |  VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
+      info.stages = VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
       info.access = VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;
       info.tiling = VK_IMAGE_TILING_OPTIMAL;
       info.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -1309,7 +1309,7 @@ namespace dxvk {
     DxvkBufferCreateInfo bufferInfo;
     bufferInfo.size = sizeof(UboData);
     bufferInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-    bufferInfo.stages =  VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
+    bufferInfo.stages = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
     bufferInfo.access = VK_ACCESS_UNIFORM_READ_BIT;
     m_ubo = m_device->createBuffer(bufferInfo, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
   }

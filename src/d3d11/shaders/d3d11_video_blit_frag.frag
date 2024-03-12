@@ -1,4 +1,4 @@
-#version 460
+#version 450
 
 // Can't use matrix types here since even a two-row
 // matrix will be padded to 16 bytes per column for
