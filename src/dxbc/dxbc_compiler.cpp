@@ -5584,12 +5584,12 @@ namespace dxvk {
     result.type.ctype  = DxbcScalarType::Uint32;
     result.type.ccount = 1;
     
-    if (info.image.sampled == 1) {
+    if (info.image.ms == 0 && info.image.sampled == 1) {
       result.id = m_module.opImageQueryLevels(
         getVectorTypeId(result.type),
         m_module.opLoad(info.typeId, info.varId));
     } else {
-      // Report one LOD in case of UAVs
+      // Report one LOD in case of UAVs or multisampled images
       result.id = m_module.constu32(1);
     }
 
@@ -7799,6 +7799,21 @@ namespace dxvk {
     return DxbcRegMask::firstN(getTexCoordDim(imageType));
   }
   
+
+  bool DxbcCompiler::ignoreInputSystemValue(DxbcSystemValue sv) const {
+    switch (sv) {
+      case DxbcSystemValue::Position:
+      case DxbcSystemValue::IsFrontFace:
+      case DxbcSystemValue::SampleIndex:
+      case DxbcSystemValue::PrimitiveId:
+      case DxbcSystemValue::Coverage:
+        return m_programInfo.type() == DxbcProgramType::PixelShader;
+
+      default:
+        return false;
+    }
+  }
+
   
   DxbcVectorType DxbcCompiler::getInputRegType(uint32_t regIdx) const {
     switch (m_programInfo.type()) {
@@ -7829,8 +7844,25 @@ namespace dxvk {
         result.ctype  = DxbcScalarType::Float32;
         result.ccount = 4;
 
-        if (m_isgn->findByRegister(regIdx))
-          result.ccount = m_isgn->regMask(regIdx).minComponents();
+        if (m_isgn == nullptr || !m_isgn->findByRegister(regIdx))
+          return result;
+
+        DxbcRegMask mask(0u);
+        DxbcRegMask used(0u);
+
+        for (const auto& e : *m_isgn) {
+          if (e.registerId == regIdx && !ignoreInputSystemValue(e.systemValue)) {
+            mask |= e.componentMask;
+            used |= e.componentUsed;
+          }
+        }
+
+        if (m_programInfo.type() == DxbcProgramType::PixelShader) {
+          if ((used.raw() & mask.raw()) == used.raw())
+            mask = used;
+        }
+
+        result.ccount = mask.minComponents();
         return result;
       }
     }
