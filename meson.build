@@ -1,4 +1,4 @@
-project('dxvk', ['c', 'cpp'], version : 'v2.3', meson_version : '>= 0.58', default_options : [ 'cpp_std=c++17', 'warning_level=2' ])
+project('dxvk', ['c', 'cpp'], version : 'v2.3', meson_version : '>= 0.58', default_options : [ 'cpp_std=c++latest', 'warning_level=2' ])
 
 cpu_family = target_machine.cpu_family()
 platform   = target_machine.system()
@@ -57,6 +57,11 @@ if platform == 'windows'
   compiler_args += [
     '-DNOMINMAX',
     '-D_WIN32_WINNT=0xa00',
+	'/arch:AVX2',
+	'/MP',
+	'/GT',
+	'/GL',
+	'/Oi',
   ]
 
   if not dxvk_is_msvc
