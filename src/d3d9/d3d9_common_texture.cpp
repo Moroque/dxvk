@@ -10,6 +10,44 @@
 
 namespace dxvk {
 
+  bool D3D9CommonTexture::forceDisableRenderTargetUpgrades = false;
+
+#ifdef _HDR_DEBUG
+  void D3D9CommonTexture::RenderTargetFormatLogger(
+    D3D9Format OriginalFormat,
+    bool       IsBackBuffer,
+    D3D9Format UpgradedFormat)
+  {
+    bool isUpgraded = UpgradedFormat != OriginalFormat
+                   && UpgradedFormat != D3D9Format::Unknown;
+
+    std::string logString;
+
+    if (unlikely(IsBackBuffer)) {
+      logString = ("back buffer");
+    }
+    else {
+      logString = ("render target");
+    }
+
+    if (isUpgraded) {
+      Logger::info(str::format("D3D9: ",
+                               logString.c_str(),
+                               !IsBackBuffer ? " format upgraded: " : " format upgraded:   ",
+                               OriginalFormat,
+                               " -> ",
+                               UpgradedFormat));
+    }
+    else {
+      Logger::info(str::format("D3D9: used ",
+                               logString.c_str(),
+                               !IsBackBuffer ? ":     " : ":       ",
+                               OriginalFormat));
+    }
+    return;
+  }
+#endif
+
   D3D9CommonTexture::D3D9CommonTexture(
           D3D9DeviceEx*             pDevice,
           IUnknown*                 pInterface,
@@ -39,7 +77,99 @@ namespace dxvk {
       SetAllNeedUpload();
     }
 
-    m_mapping = pDevice->LookupFormat(m_desc.Format);
+#ifdef _HDR_DEBUG
+  #define DEFAULT_BACK_BUFFER_MAPPING                         \
+            m_mapping = pDevice->LookupFormat(m_desc.Format); \
+            RenderTargetFormatLogger(m_desc.Format, true)
+#else
+  #define DEFAULT_BACK_BUFFER_MAPPING                         \
+            m_mapping = pDevice->LookupFormat(m_desc.Format)
+#endif
+
+#ifdef _HDR_DEBUG
+  #define DEFAULT_RENDER_TARGET_MAPPING                       \
+            m_mapping = pDevice->LookupFormat(m_desc.Format); \
+            RenderTargetFormatLogger(m_desc.Format)
+#else
+  #define DEFAULT_RENDER_TARGET_MAPPING                       \
+            m_mapping = pDevice->LookupFormat(m_desc.Format)
+#endif
+
+    if (unlikely(m_desc.IsBackBuffer))
+    {
+      if (m_device->GetOptions()->enableBackBufferUpgrade
+       && !forceDisableRenderTargetUpgrades)
+      {
+        if (IsSensibleFormatUpgrade(static_cast<D3DFORMAT>(m_desc.Format), m_device->GetOptions()->upgradeBackBufferTo)) {
+          D3D9Format upgradedFormat = D3D9Format(m_device->GetOptions()->upgradeBackBufferTo);
+          m_mapping = pDevice->LookupFormat(upgradedFormat);
+#ifdef _HDR_DEBUG
+          RenderTargetFormatLogger(m_desc.Format, true, upgradedFormat);
+#endif
+        }
+        else {
+          DEFAULT_BACK_BUFFER_MAPPING;
+        }
+      }
+      else
+      {
+        DEFAULT_BACK_BUFFER_MAPPING;
+      }
+    }
+    else if (m_desc.Usage & D3DUSAGE_RENDERTARGET)
+    {
+      if (m_device->GetOptions()->enableRenderTargetUpgrades
+       && !forceDisableRenderTargetUpgrades)
+      {
+        try { // d3d9 driver hack formats ffs >:(
+          D3D9Format upgradedFormat =
+            static_cast<D3D9Format>(m_device->GetOptions()->formatUpgradeArray.at(static_cast<size_t>(m_desc.Format)));
+
+          if (upgradedFormat != D3D9Format::Unknown) {
+            m_mapping = pDevice->LookupFormat(upgradedFormat);
+#ifdef _HDR_DEBUG
+            RenderTargetFormatLogger(m_desc.Format, false, upgradedFormat);
+#endif
+          }
+          else {
+            DEFAULT_RENDER_TARGET_MAPPING;
+          }
+        }
+        catch(const std::exception& e)
+        {
+#ifdef _HDR_DEBUG
+          uint32_t weirdFormat = static_cast<uint32_t>(m_desc.Format);
+
+          char* weirdChars = reinterpret_cast<char*>(&weirdFormat);
+
+          char  chars[5] = { ' ', ' ', ' ', ' ', '\0' };
+          char*   pChars = reinterpret_cast<char*>(&chars);
+
+          for (uint32_t i = 0; i < 4; i++) {
+            *pChars = *weirdChars;
+            pChars++;
+            weirdChars++;
+          }
+
+          Logger::info(str::format("D3D9: can't upgrade this format: ",
+                                   "0x", std::hex, weirdFormat, ": ",
+                                   chars));
+#endif
+          DEFAULT_RENDER_TARGET_MAPPING;
+        }
+      }
+      else
+      {
+        DEFAULT_RENDER_TARGET_MAPPING;
+      }
+    }
+    else
+    {
+      m_mapping = pDevice->LookupFormat(m_desc.Format);
+    }
+
+#undef DEFAULT_RENDER_TARGET_MAPPING
+#undef DEFAULT_BACK_BUFFER_MAPPING
 
     m_mapMode        = DetermineMapMode();
     m_shadow         = DetermineShadowState();
@@ -607,7 +737,7 @@ namespace dxvk {
           UINT                   Layer,
           UINT                   Lod,
           VkImageUsageFlags      UsageFlags,
-          bool                   Srgb) {    
+          bool                   Srgb) {
     DxvkImageViewCreateInfo viewInfo;
     viewInfo.format    = m_mapping.ConversionFormatInfo.FormatColor != VK_FORMAT_UNDEFINED
                        ? PickSRGB(m_mapping.ConversionFormatInfo.FormatColor, m_mapping.ConversionFormatInfo.FormatSrgb, Srgb)

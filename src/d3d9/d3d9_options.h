@@ -1,9 +1,17 @@
 #pragma once
 
+#include <array>
+
+#include <d3d9.h>
+
 #include "../util/config/config.h"
 #include "../dxvk/dxvk_device.h"
 
 namespace dxvk {
+
+  bool IsSensibleFormatUpgrade(
+    const D3DFORMAT OriginalFormat,
+    const D3DFORMAT UpgradedFormat);
 
   enum class D3D9FloatEmulation {
     Disabled,
@@ -143,6 +151,50 @@ namespace dxvk {
 
     /// Clamps negative LOD bias
     bool clampNegativeLodBias;
+
+    /// upgrades render targets
+    bool enableRenderTargetUpgrades;
+
+    /// array that describes which format will be ugprade to which
+    std::array<D3DFORMAT, 120> formatUpgradeArray;
+
+    /// upgrade specific render target formats
+    //D3DFORMAT upgrade_RGBA8_UNORM_renderTargetTo;
+    //D3DFORMAT upgrade_RGBX8_UNORM_renderTargetTo;
+    //D3DFORMAT upgrade_BGRA8_UNORM_renderTargetTo;
+    //D3DFORMAT upgrade_BGRX8_UNORM_renderTargetTo;
+    //D3DFORMAT upgrade_RGB10A2_UNORM_renderTargetTo;
+    //D3DFORMAT upgrade_BGR10A2_UNORM_renderTargetTo;
+    //D3DFORMAT upgrade_RGBA16_UNORM_renderTargetTo;
+    //D3DFORMAT upgrade_RGBA16_FLOAT_renderTargetTo;
+
+    /// enable back buffer format upgrade
+    bool enableBackBufferUpgrade;
+
+    /// upgrade back buffer format to
+    D3DFORMAT upgradeBackBufferTo;
+
+    /// enable upgrade swap chain
+    bool enableSwapChainUpgrade;
+
+    /// which output format to upgrade to
+    VkFormat upgradeSwapChainFormatTo;
+
+    /// output color space to upgrade to
+    VkColorSpaceKHR upgradeSwapChainColorSpaceTo;
+
+    /// disables 
+    //bool disableSrgbSamplingAndWriting;
+
+    /// enfore fullscreen exclusive or windowed mode
+    /// for the internal swap chain
+    bool enforceWindowModeInternally;
+#if defined(_MSC_VER)
+    BOOL
+#else
+    WINBOOL
+#endif
+            enforcedWindowModeInternally;
 
     /// How much virtual memory will be used for textures (in MB).
     int32_t textureMemory;

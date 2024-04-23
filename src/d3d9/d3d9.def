@@ -24,7 +24,10 @@ EXPORTS
   DXVK_RegisterAnnotation @28257 NONAME
   DXVK_UnRegisterAnnotation @28258 NONAME
 
-  Direct3D9ForceHybridEnumeration @16 NONAME PRIVATE
-  
+  Direct3D9ForceHybridEnumeration @16 NONAME PRIVATE  
+
   Direct3DCreate9On12 @20
   Direct3DCreate9On12Ex @21
+
+  DXVK_D3D9_HDR_DisableRenderTargetUpgrade @28259
+  DXVK_D3D9_HDR_EnableRenderTargetUpgrade @28260

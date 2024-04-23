@@ -169,5 +169,5 @@ namespace dxvk {
             VkComponentMapping    Swizzle);
 
   };
-  
+
 };

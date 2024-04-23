@@ -967,5 +967,5 @@ namespace dxvk {
     m_dxgiFormats[uint32_t(Format)].FormatColor = Target;
     m_dxgiFormats[uint32_t(Format)].Swizzle = Swizzle;
   }
-  
+
 }

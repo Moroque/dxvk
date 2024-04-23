@@ -1,5 +1,7 @@
 #include "d3d11_device.h"
+#include "d3d11_enums.h"
 #include "d3d11_gdi.h"
+#include "d3d11_render_target_upgrade_helper.h"
 #include "d3d11_texture.h"
 
 #include "../util/util_shared_res.h"
@@ -19,6 +21,62 @@ namespace dxvk {
   : m_interface(pInterface), m_device(pDevice), m_dimension(Dimension), m_desc(*pDesc),
     m_11on12(p11on12Info ? *p11on12Info : D3D11_ON_12_RESOURCE_INFO()), m_dxgiUsage(DxgiUsage) {
     DXGI_VK_FORMAT_MODE   formatMode   = GetFormatMode();
+
+    if (unlikely(m_device->GetOptions()->enableBackBufferUpgrade
+              && m_dxgiUsage & DXGI_USAGE_BACK_BUFFER))
+    {
+      DXGI_FORMAT upgradedFormat = D3D11RenderTargetUpgradeHelper::RenderTargetFormatUpgradeHelper(
+                                     m_desc.Format,
+                                     m_device->GetOptions()->upgradeBackBufferTo,
+                                     D3D11RenderTargetUpgradeHelper::FORMAT_TYPE::BACK_BUFFER);
+      if (m_desc.Format != upgradedFormat)
+      {
+        originalFormat = m_desc.Format;
+
+        m_desc.Format = upgradedFormat;
+      }
+#ifdef _HDR_DEBUG
+      Logger::info(str::format("       Resource ptr: 0x", std::hex, reinterpret_cast<POINTER_SIZE>(pInterface)));
+#endif
+    }
+    else if (m_device->GetOptions()->enableRenderTargetUpgrades
+          && formatMode == DXGI_VK_FORMAT_MODE_COLOR) // DXGI_VK_FORMAT_MODE_COLOR == render target
+    {
+      DXGI_FORMAT upgradedFormat = D3D11RenderTargetUpgradeHelper::RenderTargetFormatUpgradeHelper(
+                                     m_desc.Format,
+                                     m_device->GetOptions()->formatUpgradeInfoArray[m_desc.Format].upgradedFormat,
+                                     D3D11RenderTargetUpgradeHelper::FORMAT_TYPE::RENDER_TARGET);
+
+      if (m_desc.Format != upgradedFormat)
+      {
+        originalFormat = m_desc.Format;
+
+        m_desc.Format = upgradedFormat;
+      }
+#ifdef _HDR_DEBUG
+      Logger::info(str::format("       Resource ptr: 0x", std::hex, reinterpret_cast<POINTER_SIZE>(pInterface)));
+#endif
+    }
+#ifdef _HDR_DEBUG
+    else
+    {
+      if (m_dxgiUsage & DXGI_USAGE_BACK_BUFFER)
+      {
+        D3D11RenderTargetUpgradeHelper::RenderTargetFormatLogger(m_desc.Format,
+                                                                 DXGI_FORMAT_UNKNOWN,
+                                                                 D3D11RenderTargetUpgradeHelper::FORMAT_TYPE::BACK_BUFFER);
+        Logger::info(str::format("       Resource ptr: 0x", std::hex, reinterpret_cast<POINTER_SIZE>(pInterface)));
+      }
+      else if (formatMode == DXGI_VK_FORMAT_MODE_COLOR)
+      {
+        D3D11RenderTargetUpgradeHelper::RenderTargetFormatLogger(m_desc.Format,
+                                                                 DXGI_FORMAT_UNKNOWN,
+                                                                 D3D11RenderTargetUpgradeHelper::FORMAT_TYPE::RENDER_TARGET);
+        Logger::info(str::format("       Resource ptr: 0x", std::hex, reinterpret_cast<POINTER_SIZE>(pInterface)));
+      }
+    }
+#endif
+
     DXGI_VK_FORMAT_INFO   formatInfo   = m_device->LookupFormat(m_desc.Format, formatMode);
     DXGI_VK_FORMAT_FAMILY formatFamily = m_device->LookupFamily(m_desc.Format, formatMode);
     DXGI_VK_FORMAT_INFO   formatPacked = m_device->LookupPackedFormat(m_desc.Format, formatMode);
@@ -228,8 +286,8 @@ namespace dxvk {
         "\n  Samples: ", m_desc.SampleDesc.Count,
         "\n  Layers:  ", m_desc.ArraySize,
         "\n  Levels:  ", m_desc.MipLevels,
-        "\n  Usage:   ", std::hex, m_desc.BindFlags,
-        "\n  Flags:   ", std::hex, m_desc.MiscFlags));
+        "\n  Usage:   ", enumerateD3d11BindFlags(m_desc.BindFlags),
+        "\n  Flags:   ", enumerateD3d11MiscFlags(m_desc.MiscFlags)));
     }
     
     // Create the image on a host-visible memory type

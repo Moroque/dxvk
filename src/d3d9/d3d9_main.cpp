@@ -111,4 +111,14 @@ extern "C" {
     return Direct3DCreate9Ex(sdk_version, output);
   }
 
+  DLLEXPORT bool __stdcall DXVK_D3D9_HDR_DisableRenderTargetUpgrade() {
+      dxvk::D3D9CommonTexture::forceDisableRenderTargetUpgrades = true;
+      return true;
+  }
+
+  DLLEXPORT bool __stdcall DXVK_D3D9_HDR_EnableRenderTargetUpgrade() {
+      dxvk::D3D9CommonTexture::forceDisableRenderTargetUpgrades = false;
+      return true;
+  }
+
 }

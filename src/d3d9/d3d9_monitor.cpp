@@ -6,6 +6,10 @@ namespace dxvk {
 
   uint32_t GetMonitorFormatBpp(D3D9Format Format) {
     switch (Format) {
+    case D3D9Format::A16B16G16R16:
+    case D3D9Format::A16B16G16R16F:
+      return 64;
+
     case D3D9Format::A8R8G8B8:
     case D3D9Format::X8R8G8B8: // This is still 32 bit even though the alpha is unspecified.
     case D3D9Format::A2R10G10B10:
@@ -29,7 +33,9 @@ namespace dxvk {
           D3D9Format Format) {
     // D3D9Format::X1R5G5B5 is unsupported by native drivers and some apps, 
     // such as the BGE SettingsApplication, rely on it not being exposed.
-    return Format == D3D9Format::A2R10G10B10
+    return Format == D3D9Format::A16B16G16R16F
+        || Format == D3D9Format::A16B16G16R16
+        || Format == D3D9Format::A2R10G10B10
         || Format == D3D9Format::X8R8G8B8
         || Format == D3D9Format::R5G6B5;
   }
@@ -40,10 +46,12 @@ namespace dxvk {
           D3D9Format BackBufferFormat,
           BOOL       Windowed) {
     if (!Windowed) {
-      return (AdapterFormat == D3D9Format::A2R10G10B10 && BackBufferFormat == D3D9Format::A2R10G10B10) ||
-             (AdapterFormat == D3D9Format::X8R8G8B8    && BackBufferFormat == D3D9Format::X8R8G8B8) ||
-             (AdapterFormat == D3D9Format::X8R8G8B8    && BackBufferFormat == D3D9Format::A8R8G8B8) ||
-             (AdapterFormat == D3D9Format::R5G6B5      && BackBufferFormat == D3D9Format::R5G6B5);
+      return (AdapterFormat == D3D9Format::A16B16G16R16F && BackBufferFormat == D3D9Format::A16B16G16R16F) ||
+             (AdapterFormat == D3D9Format::A16B16G16R16  && BackBufferFormat == D3D9Format::A16B16G16R16) ||
+             (AdapterFormat == D3D9Format::A2R10G10B10   && BackBufferFormat == D3D9Format::A2R10G10B10) ||
+             (AdapterFormat == D3D9Format::X8R8G8B8      && BackBufferFormat == D3D9Format::X8R8G8B8) ||
+             (AdapterFormat == D3D9Format::X8R8G8B8      && BackBufferFormat == D3D9Format::A8R8G8B8) ||
+             (AdapterFormat == D3D9Format::R5G6B5        && BackBufferFormat == D3D9Format::R5G6B5);
     }
 
     return IsSupportedBackBufferFormat(BackBufferFormat);
@@ -51,7 +59,9 @@ namespace dxvk {
 
   bool IsSupportedBackBufferFormat(
         D3D9Format BackBufferFormat) {
-    return BackBufferFormat == D3D9Format::A2R10G10B10
+    return BackBufferFormat == D3D9Format::A16B16G16R16F
+        || BackBufferFormat == D3D9Format::A16B16G16R16
+        || BackBufferFormat == D3D9Format::A2R10G10B10
         || BackBufferFormat == D3D9Format::A8R8G8B8
         || BackBufferFormat == D3D9Format::X8R8G8B8
         || BackBufferFormat == D3D9Format::R5G6B5

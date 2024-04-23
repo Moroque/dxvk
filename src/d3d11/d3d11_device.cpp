@@ -13,12 +13,14 @@
 #include "d3d11_context_def.h"
 #include "d3d11_context_imm.h"
 #include "d3d11_device.h"
+#include "d3d11_enums.h"
 #include "d3d11_fence.h"
 #include "d3d11_input_layout.h"
 #include "d3d11_interfaces.h"
 #include "d3d11_interop.h"
 #include "d3d11_query.h"
 #include "d3d11_resource.h"
+#include "d3d11_render_target_upgrade_helper.h"
 #include "d3d11_sampler.h"
 #include "d3d11_shader.h"
 #include "d3d11_state_object.h"
@@ -367,23 +369,70 @@ namespace dxvk {
         return E_INVALIDARG;
     } else {
       desc = *pDesc;
-      
+
       if (FAILED(D3D11ShaderResourceView::NormalizeDesc(pResource, &desc)))
         return E_INVALIDARG;
     }
+
+    if (unlikely(m_d3d11Options.enableBackBufferUpgrade && resourceDesc.DxgiUsage & DXGI_USAGE_BACK_BUFFER))
+    {
+      DXGI_FORMAT originalFormat = GetOriginalResourceFormat(pResource);
+      if (originalFormat != DXGI_FORMAT_FORCE_UINT)
+      {
+        desc.Format = D3D11RenderTargetUpgradeHelper::RenderTargetFormatUpgradeHelper(
+          originalFormat,
+          m_d3d11Options.upgradeBackBufferTo,
+          D3D11RenderTargetUpgradeHelper::FORMAT_TYPE::BACK_BUFFER_SHADER_RESOURCE_VIEW);
+#ifdef _HDR_DEBUG
+          Logger::info(str::format("       Resource ptr: 0x", std::hex, reinterpret_cast<POINTER_SIZE>(pResource)));
+#endif
+      }
+    }
+    else if (m_d3d11Options.enableRenderTargetUpgrades && resourceDesc.BindFlags & D3D11_BIND_RENDER_TARGET)
+    {
+      DXGI_FORMAT originalFormat = GetOriginalResourceFormat(pResource);
+      if (originalFormat != DXGI_FORMAT_FORCE_UINT)
+      {
+        desc.Format = D3D11RenderTargetUpgradeHelper::RenderTargetFormatUpgradeHelper(
+          originalFormat,
+          m_d3d11Options.formatUpgradeInfoArray[static_cast<size_t>(originalFormat)].upgradedFormat,
+          D3D11RenderTargetUpgradeHelper::FORMAT_TYPE::SHADER_RESOURCE_VIEW);
+#ifdef _HDR_DEBUG
+          Logger::info(str::format("       Resource ptr: 0x", std::hex, reinterpret_cast<POINTER_SIZE>(pResource)));
+#endif
+      }
+    }
+
 
     uint32_t plane = D3D11ShaderResourceView::GetPlaneSlice(&desc);
     
     if (!CheckResourceViewCompatibility(pResource, D3D11_BIND_SHADER_RESOURCE, desc.Format, plane)) {
       Logger::err(str::format("D3D11: Cannot create shader resource view:",
-        "\n  Resource type:   ", resourceDesc.Dim,
-        "\n  Resource usage:  ", resourceDesc.BindFlags,
-        "\n  Resource format: ", resourceDesc.Format,
-        "\n  View format:     ", desc.Format,
-        "\n  View plane:      ", plane));
+        "\n  Resource type:    ", resourceDesc.Dim,
+        "\n  Resource usage:   ", enumerateD3d11BindFlags(resourceDesc.BindFlags),
+        "\n  Resource flags:   ", enumerateD3d11MiscFlags(resourceDesc.MiscFlags),
+        "\n  Resource format:  ", resourceDesc.Format,
+        "\n  View format:      ", desc.Format,
+        "\n  View plane:       ", plane,
+        enumerateD3d11SrvDesc1(&desc),
+        "\n  Resource ptr:     0x", std::hex, reinterpret_cast<POINTER_SIZE>(pResource)));
       return E_INVALIDARG;
     }
-    
+
+#ifdef _HDR_DEBUG
+    if (resourceDesc.BindFlags & D3D11_BIND_RENDER_TARGET) {
+      Logger::info(str::format("D3D11: Shader Resource View of Render Target created:",
+                               "\n  Resource type:    ", resourceDesc.Dim,
+                               "\n  Resource usage:   ", enumerateD3d11BindFlags(resourceDesc.BindFlags),
+                               "\n  Resource flags:   ", enumerateD3d11MiscFlags(resourceDesc.MiscFlags),
+                               "\n  Resource format:  ", resourceDesc.Format,
+                               "\n  View format:      ", desc.Format,
+                               "\n  View plane:       ", plane,
+                               enumerateD3d11SrvDesc1(&desc),
+                               "\n  Resource ptr:     0x", std::hex, reinterpret_cast<POINTER_SIZE>(pResource)));
+    }
+#endif
+
     if (!ppSRView)
       return S_FALSE;
     
@@ -444,22 +493,70 @@ namespace dxvk {
         return E_INVALIDARG;
     } else {
       desc = *pDesc;
-      
+
       if (FAILED(D3D11UnorderedAccessView::NormalizeDesc(pResource, &desc)))
         return E_INVALIDARG;
     }
-    
+
+
+    if (unlikely(m_d3d11Options.enableBackBufferUpgrade && resourceDesc.DxgiUsage & DXGI_USAGE_BACK_BUFFER))
+    {
+      DXGI_FORMAT originalFormat = GetOriginalResourceFormat(pResource);
+      if (originalFormat != DXGI_FORMAT_FORCE_UINT)
+      {
+        desc.Format = D3D11RenderTargetUpgradeHelper::RenderTargetFormatUpgradeHelper(
+          originalFormat,
+          m_d3d11Options.upgradeBackBufferTo,
+          D3D11RenderTargetUpgradeHelper::FORMAT_TYPE::BACK_BUFFER_UNORDERED_ACCESS_VIEW);
+#ifdef _HDR_DEBUG
+          Logger::info(str::format("       Resource ptr: 0x", std::hex, reinterpret_cast<POINTER_SIZE>(pResource)));
+#endif
+      }
+    }
+    else if (m_d3d11Options.enableRenderTargetUpgrades && resourceDesc.BindFlags & D3D11_BIND_RENDER_TARGET)
+    {
+      DXGI_FORMAT originalFormat = GetOriginalResourceFormat(pResource);
+      if (originalFormat != DXGI_FORMAT_FORCE_UINT)
+      {
+        desc.Format = D3D11RenderTargetUpgradeHelper::RenderTargetFormatUpgradeHelper(
+          originalFormat,
+          m_d3d11Options.formatUpgradeInfoArray[static_cast<size_t>(originalFormat)].upgradedFormat,
+          D3D11RenderTargetUpgradeHelper::FORMAT_TYPE::UNORDERED_ACCESS_VIEW);
+#ifdef _HDR_DEBUG
+          Logger::info(str::format("       Resource ptr: 0x", std::hex, reinterpret_cast<POINTER_SIZE>(pResource)));
+#endif
+      }
+    }
+
+
     uint32_t plane = D3D11UnorderedAccessView::GetPlaneSlice(&desc);
 
     if (!CheckResourceViewCompatibility(pResource, D3D11_BIND_UNORDERED_ACCESS, desc.Format, plane)) {
       Logger::err(str::format("D3D11: Cannot create unordered access view:",
         "\n  Resource type:   ", resourceDesc.Dim,
-        "\n  Resource usage:  ", resourceDesc.BindFlags,
+        "\n  Resource usage:  ", enumerateD3d11BindFlags(resourceDesc.BindFlags),
+        "\n  Resource flags:  ", enumerateD3d11MiscFlags(resourceDesc.MiscFlags),
         "\n  Resource format: ", resourceDesc.Format,
         "\n  View format:     ", desc.Format,
-        "\n  View plane:      ", plane));
+        "\n  View plane:      ", plane,
+        enumerateD3d11UavDesc1(&desc),
+        "\n  Resource ptr:    0x", std::hex, reinterpret_cast<POINTER_SIZE>(pResource)));
       return E_INVALIDARG;
     }
+
+#ifdef _HDR_DEBUG
+    if (resourceDesc.BindFlags & D3D11_BIND_RENDER_TARGET) {
+      Logger::info(str::format("D3D11: Unordered Access View of Render Target created:",
+                               "\n  Resource type:   ", resourceDesc.Dim,
+                               "\n  Resource usage:  ", enumerateD3d11BindFlags(resourceDesc.BindFlags),
+                               "\n  Resource flags:  ", enumerateD3d11MiscFlags(resourceDesc.MiscFlags),
+                               "\n  Resource format: ", resourceDesc.Format,
+                               "\n  View format:     ", desc.Format,
+                               "\n  View plane:      ", plane,
+                               enumerateD3d11UavDesc1(&desc),
+                               "\n  Resource ptr:    0x", std::hex, reinterpret_cast<POINTER_SIZE>(pResource)));
+    }
+#endif
 
     if (!ppUAView)
       return S_FALSE;
@@ -529,22 +626,70 @@ namespace dxvk {
         return E_INVALIDARG;
     } else {
       desc = *pDesc;
-      
+
       if (FAILED(D3D11RenderTargetView::NormalizeDesc(pResource, &desc)))
         return E_INVALIDARG;
     }
-    
+
+
+    if (unlikely(m_d3d11Options.enableBackBufferUpgrade && resourceDesc.DxgiUsage & DXGI_USAGE_BACK_BUFFER))
+    {
+      DXGI_FORMAT originalFormat = GetOriginalResourceFormat(pResource);
+      if (originalFormat != DXGI_FORMAT_FORCE_UINT)
+      {
+        desc.Format = D3D11RenderTargetUpgradeHelper::RenderTargetFormatUpgradeHelper(
+          originalFormat,
+          m_d3d11Options.upgradeBackBufferTo,
+          D3D11RenderTargetUpgradeHelper::FORMAT_TYPE::BACK_BUFFER_RENDER_TARGET_VIEW);
+#ifdef _HDR_DEBUG
+          Logger::info(str::format("       Resource ptr: 0x", std::hex, reinterpret_cast<POINTER_SIZE>(pResource)));
+#endif
+      }
+    }
+    else if (m_d3d11Options.enableRenderTargetUpgrades && resourceDesc.BindFlags & D3D11_BIND_RENDER_TARGET)
+    {
+      DXGI_FORMAT originalFormat = GetOriginalResourceFormat(pResource);
+      if (originalFormat != DXGI_FORMAT_FORCE_UINT)
+      {
+        desc.Format = D3D11RenderTargetUpgradeHelper::RenderTargetFormatUpgradeHelper(
+          originalFormat,
+          m_d3d11Options.formatUpgradeInfoArray[static_cast<size_t>(originalFormat)].upgradedFormat,
+          D3D11RenderTargetUpgradeHelper::FORMAT_TYPE::RENDER_TARGET_VIEW);
+#ifdef _HDR_DEBUG
+          Logger::info(str::format("       Resource ptr: 0x", std::hex, reinterpret_cast<POINTER_SIZE>(pResource)));
+#endif
+      }
+    }
+
+
     uint32_t plane = D3D11RenderTargetView::GetPlaneSlice(&desc);
 
     if (!CheckResourceViewCompatibility(pResource, D3D11_BIND_RENDER_TARGET, desc.Format, plane)) {
       Logger::err(str::format("D3D11: Cannot create render target view:",
-        "\n  Resource type:   ", resourceDesc.Dim,
-        "\n  Resource usage:  ", resourceDesc.BindFlags,
-        "\n  Resource format: ", resourceDesc.Format,
-        "\n  View format:     ", desc.Format,
-        "\n  View plane:      ", plane));
+        "\n  Resource type:    ", resourceDesc.Dim,
+        "\n  Resource usage:   ", enumerateD3d11BindFlags(resourceDesc.BindFlags),
+        "\n  Resource flags:   ", enumerateD3d11MiscFlags(resourceDesc.MiscFlags),
+        "\n  Resource format:  ", resourceDesc.Format,
+        "\n  View format:      ", desc.Format,
+        "\n  View plane:       ", plane,
+        enumerateD3d11RtvDesc1(&desc),
+        "\n  Resource ptr:     0x", std::hex, reinterpret_cast<POINTER_SIZE>(pResource)));
       return E_INVALIDARG;
     }
+
+#ifdef _HDR_DEBUG
+    if (resourceDesc.BindFlags & D3D11_BIND_RENDER_TARGET) {
+      Logger::info(str::format("D3D11: Render Target View created:",
+                               "\n  Resource type:    ", resourceDesc.Dim,
+                               "\n  Resource usage:   ", enumerateD3d11BindFlags(resourceDesc.BindFlags),
+                               "\n  Resource flags:   ", enumerateD3d11MiscFlags(resourceDesc.MiscFlags),
+                               "\n  Resource format:  ", resourceDesc.Format,
+                               "\n  View format:      ", desc.Format,
+                               "\n  View plane:       ", plane,
+                               enumerateD3d11RtvDesc1(&desc),
+                               "\n  Resource ptr:     0x", std::hex, reinterpret_cast<POINTER_SIZE>(pResource)));
+    }
+#endif
 
     if (!ppRTView)
       return S_FALSE;
@@ -588,12 +733,20 @@ namespace dxvk {
     if (!CheckResourceViewCompatibility(pResource, D3D11_BIND_DEPTH_STENCIL, desc.Format, 0)) {
       Logger::err(str::format("D3D11: Cannot create depth-stencil view:",
         "\n  Resource type:   ", resourceDesc.Dim,
-        "\n  Resource usage:  ", resourceDesc.BindFlags,
+        "\n  Resource usage:  ", enumerateD3d11BindFlags(resourceDesc.BindFlags),
+        "\n  Resource flags:  ", enumerateD3d11MiscFlags(resourceDesc.MiscFlags),
         "\n  Resource format: ", resourceDesc.Format,
         "\n  View format:     ", desc.Format));
       return E_INVALIDARG;
     }
-    
+
+  //  Logger::info(str::format("D3D11: Depth-Stencil View created:",
+  //                           "\n  Resource type:   ", resourceDesc.Dim,
+  //                           "\n  Resource usage:  ", enumerateD3d11BindFlags(resourceDesc.BindFlags),
+  //                           "\n  Resource flags:  ", enumerateD3d11MiscFlags(resourceDesc.MiscFlags),
+  //                           "\n  Resource format: ", resourceDesc.Format,
+  //                           "\n  View format:     ", desc.Format));
+
     if (ppDepthStencilView == nullptr)
       return S_FALSE;
     
@@ -2139,6 +2292,7 @@ namespace dxvk {
        || Format == DXGI_FORMAT_R8G8B8A8_UNORM_SRGB
        || Format == DXGI_FORMAT_B8G8R8A8_UNORM
        || Format == DXGI_FORMAT_B8G8R8A8_UNORM_SRGB
+       || Format == DXGI_FORMAT_R16G16B16A16_UNORM
        || Format == DXGI_FORMAT_R16G16B16A16_FLOAT
        || Format == DXGI_FORMAT_R10G10B10A2_UNORM
        || Format == DXGI_FORMAT_R10G10B10_XR_BIAS_A2_UNORM)
