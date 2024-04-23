@@ -873,6 +873,16 @@ namespace dxvk {
     { R"(\\RedRiver\.exe$)", {{
       { "d3d9.floatEmulation",              "Strict" },
     }} },
+    /* Dark Void - Crashes above 60fps in places */
+    { R"(\\ShippingPC-SkyGame\.exe$)", {{
+      { "d3d9.maxFrameRate",                "60" },
+    }} },
+    /* 9th Dawn II                               *
+     * OpenGL game that also spins up d3d9       *
+     * Black screens without config              */
+    { R"(\\ninthdawnii\.exe$)", {{
+      { "d3d9.deferSurfaceCreation",        "True" },
+    }} },
 
 
     /**********************************************/
