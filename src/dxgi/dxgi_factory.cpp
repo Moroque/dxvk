@@ -233,7 +233,7 @@ namespace dxvk {
     descFs.Windowed         = pDesc->Windowed;
     
     IDXGISwapChain1* swapChain = nullptr;
-    HRESULT hr = CreateSwapChainForHwnd(
+    HRESULT hr = CreateSwapChainForHwndBase(
       pDevice, pDesc->OutputWindow,
       &desc, &descFs, nullptr,
       &swapChain);
@@ -244,6 +244,19 @@ namespace dxvk {
   
   
   HRESULT STDMETHODCALLTYPE DxgiFactory::CreateSwapChainForHwnd(
+          IUnknown*             pDevice,
+          HWND                  hWnd,
+    const DXGI_SWAP_CHAIN_DESC1* pDesc,
+    const DXGI_SWAP_CHAIN_FULLSCREEN_DESC* pFullscreenDesc,
+          IDXGIOutput*          pRestrictToOutput,
+          IDXGISwapChain1**     ppSwapChain) {
+    return CreateSwapChainForHwndBase(
+      pDevice, hWnd,
+      pDesc, pFullscreenDesc, pRestrictToOutput,
+      ppSwapChain);
+  }
+
+  HRESULT STDMETHODCALLTYPE DxgiFactory::CreateSwapChainForHwndBase(
           IUnknown*             pDevice,
           HWND                  hWnd,
     const DXGI_SWAP_CHAIN_DESC1* pDesc,
