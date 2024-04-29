@@ -179,6 +179,10 @@ namespace dxvk {
       if (ins.opCode() == spv::OpFunction)
         break;
     }
+	// Set flag for stages that actually use push constants
+    // so that they can be trimmed for optimized pipelines.
+    if (usesPushConstants)
+      m_bindings.addPushConstantStage(info.stage);
 
     // Don't set pipeline library flag if the shader
     // doesn't actually support pipeline libraries
@@ -205,8 +209,8 @@ namespace dxvk {
 
     if (info.pushConstSize) {
       VkPushConstantRange pushConst;
-      pushConst.stageFlags = info.stage;
-      pushConst.offset = info.pushConstOffset;
+      pushConst.stageFlags = info.pushConstStages;
+      pushConst.offset = 0;
       pushConst.size = info.pushConstSize;
 
       m_bindings.addPushConstantRange(pushConst);
@@ -219,10 +223,7 @@ namespace dxvk {
       m_info.uniformData = m_uniformData.data();
     }
 
-    // Set flag for stages that actually use push constants
-    // so that they can be trimmed for optimized pipelines.
-    if (usesPushConstants)
-      m_bindings.addPushConstantStage(info.stage);
+    
 
     // Don't set pipeline library flag if the shader
     // doesn't actually support pipeline libraries
