@@ -452,6 +452,7 @@ namespace dxvk {
     this->maxFrameLatency               = config.getOption<int32_t>("dxgi.maxFrameLatency", 0);
     this->maxFrameRate                  = config.getOption<int32_t>("dxgi.maxFrameRate", 0);
     this->exposeDriverCommandLists      = config.getOption<bool>("d3d11.exposeDriverCommandLists", true);
+	this->longMad                       = config.getOption<bool>("d3d11.longMad", false);
 
     // HDR-mod options start
     this->enableRenderTargetUpgrades = config.getOption<bool>("d3d11.enableRenderTargetUpgrades", false);

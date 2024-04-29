@@ -425,6 +425,9 @@ namespace dxvk {
 
     /// Shader dump path
     std::string shaderDumpPath;
+
+    /// Should we make our Mads a FFma or do it the long way with an FMul and an FAdd?
+    bool longMad;
   };
 
 }
