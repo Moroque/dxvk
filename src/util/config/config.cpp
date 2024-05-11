@@ -441,6 +441,11 @@ namespace dxvk {
     { R"(\\rfg\.exe$)", {{
       { "d3d11.longMad",                  "True"    },
     }} },
+    /* Guild Wars 2 - Fixes invisibility effect   *
+     * flicker when invariantPosition is enabled  */
+    { R"(\\Gw2-64\.exe$)", {{
+      { "d3d11.longMad",                  "True"    },
+    }} },
 
     /**********************************************/
     /* D3D9 GAMES                                 */
@@ -900,6 +905,10 @@ namespace dxvk {
     { R"(\\(DFX|dfx2)\.exe$)", {{
       { "d3d9.deviceLossOnFocusLoss",       "True" },
       { "d3d9.cachedDynamicBuffers",        "True" },
+    }} },
+    /* The Sims 3 - Black screen on alt-tab      */
+    { R"(\\TS3(W)?\.exe$)", {{ 
+      { "d3d9.deviceLossOnFocusLoss",       "True" },
     }} },
 
 
