@@ -101,14 +101,14 @@ namespace dxvk {
     }
 
     D3D11_CONSERVATIVE_RASTERIZATION_TIER DetermineConservativeRasterizationTier(
-            D3D_FEATURE_LEVEL     FeatureLevel);
+            D3D_FEATURE_LEVEL     FeatureLevel) const;
 
     D3D11_SHARED_RESOURCE_TIER DetermineSharedResourceTier(
       const Rc<DxvkAdapter>&      Adapter,
             D3D_FEATURE_LEVEL     FeatureLevel);
 
     D3D11_TILED_RESOURCES_TIER DetermineTiledResourcesTier(
-            D3D_FEATURE_LEVEL     FeatureLevel);
+            D3D_FEATURE_LEVEL     FeatureLevel) const;
 
     BOOL DetermineUavExtendedTypedLoadSupport(
       const Rc<DxvkAdapter>&      Adapter,

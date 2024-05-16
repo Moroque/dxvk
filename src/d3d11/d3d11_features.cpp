@@ -190,7 +190,7 @@ namespace dxvk {
 
 
   D3D11_CONSERVATIVE_RASTERIZATION_TIER D3D11DeviceFeatures::DetermineConservativeRasterizationTier(
-          D3D_FEATURE_LEVEL     FeatureLevel) {
+          D3D_FEATURE_LEVEL     FeatureLevel) const {
     if (FeatureLevel < D3D_FEATURE_LEVEL_11_1
      || !m_features.extConservativeRasterization)
       return D3D11_CONSERVATIVE_RASTERIZATION_NOT_SUPPORTED;
@@ -287,7 +287,7 @@ namespace dxvk {
 
 
   D3D11_TILED_RESOURCES_TIER D3D11DeviceFeatures::DetermineTiledResourcesTier(
-          D3D_FEATURE_LEVEL     FeatureLevel) {
+          D3D_FEATURE_LEVEL     FeatureLevel) const {
     if (FeatureLevel < D3D_FEATURE_LEVEL_11_0
      || !m_features.core.features.sparseBinding
      || !m_features.core.features.sparseResidencyBuffer
