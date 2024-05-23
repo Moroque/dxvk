@@ -2,6 +2,8 @@
 
 #include "dxvk_include.h"
 
+#include "../util/util_version.h"
+
 namespace dxvk {
 
   /**
@@ -13,6 +15,7 @@ namespace dxvk {
    * so before using them, check whether they are supported.
    */
   struct DxvkDeviceInfo {
+    Version                                                   driverVersion;
     VkPhysicalDeviceProperties2                               core;
     VkPhysicalDeviceVulkan11Properties                        vk11;
     VkPhysicalDeviceVulkan12Properties                        vk12;
@@ -71,6 +74,7 @@ namespace dxvk {
     VkPhysicalDevicePresentWaitFeaturesKHR                    khrPresentWait;
 	VkBool32                                                  nvFillRectangle;
     VkBool32                                                  nvLowLatency2;
+    VkPhysicalDeviceDescriptorPoolOverallocationFeaturesNV    nvDescriptorPoolOverallocation;
     VkPhysicalDeviceRawAccessChainsFeaturesNV                 nvRawAccessChains;
     VkBool32                                                  nvxBinaryImport;
     VkBool32                                                  nvxImageViewHandle;
