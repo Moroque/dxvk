@@ -1291,7 +1291,7 @@ namespace dxvk {
     VkPipelineRasterizationStateCreateInfo rsInfo = { VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO };
     rsInfo.depthClampEnable   = VK_TRUE;
     rsInfo.rasterizerDiscardEnable = VK_FALSE;
-    rsInfo.polygonMode        = VK_POLYGON_MODE_FILL;
+    rsInfo.polygonMode        = VK_POLYGON_MODE_FILL_RECTANGLE_NV;
     rsInfo.lineWidth          = 1.0f;
 
     if (m_device->features().extDepthClipEnable.depthClipEnable) {

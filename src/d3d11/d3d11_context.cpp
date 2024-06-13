@@ -5433,7 +5433,7 @@ namespace dxvk {
   template<typename ContextType>
   void D3D11CommonContext<ContextType>::InitDefaultRasterizerState(
           DxvkRasterizerState*              pRsState) {
-    pRsState->polygonMode     = VK_POLYGON_MODE_FILL;
+    pRsState->polygonMode     = VK_POLYGON_MODE_FILL_RECTANGLE_NV;
     pRsState->cullMode        = VK_CULL_MODE_BACK_BIT;
     pRsState->frontFace       = VK_FRONT_FACE_CLOCKWISE;
     pRsState->depthClipEnable = VK_TRUE;

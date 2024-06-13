@@ -339,7 +339,7 @@ std::ostream& operator << (std::ostream& os, VkFrontFace e) {
 
 std::ostream& operator << (std::ostream& os, VkPolygonMode e) {
   switch (e) {
-    ENUM_NAME(VK_POLYGON_MODE_FILL);
+    ENUM_NAME(VK_POLYGON_MODE_FILL_RECTANGLE_NV);
     ENUM_NAME(VK_POLYGON_MODE_LINE);
     ENUM_NAME(VK_POLYGON_MODE_POINT);
     ENUM_DEFAULT(e);

@@ -292,7 +292,7 @@ namespace dxvk {
       case D3DFILL_POINT:     return VK_POLYGON_MODE_POINT;
       case D3DFILL_WIREFRAME: return VK_POLYGON_MODE_LINE;
       default:
-      case D3DFILL_SOLID:     return VK_POLYGON_MODE_FILL;
+      case D3DFILL_SOLID:     return VK_POLYGON_MODE_FILL_RECTANGLE_NV;
     }
   }
 

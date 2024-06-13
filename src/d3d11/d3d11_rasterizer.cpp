@@ -12,7 +12,7 @@ namespace dxvk {
     // a polygon or renders lines connecting the vertices.
     switch (desc.FillMode) {
       default:
-      case D3D11_FILL_SOLID:     m_state.polygonMode = VK_POLYGON_MODE_FILL; break;
+      case D3D11_FILL_SOLID:     m_state.polygonMode = VK_POLYGON_MODE_FILL_RECTANGLE_NV; break;
       case D3D11_FILL_WIREFRAME: m_state.polygonMode = VK_POLYGON_MODE_LINE; break;
     }
     

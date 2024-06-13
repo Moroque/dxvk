@@ -117,7 +117,7 @@ namespace dxvk {
     ctx->setInputLayout(0, nullptr, 0, nullptr);
     
     DxvkRasterizerState rsState;
-    rsState.polygonMode        = VK_POLYGON_MODE_FILL;
+    rsState.polygonMode        = VK_POLYGON_MODE_FILL_RECTANGLE_NV;
     rsState.cullMode           = VK_CULL_MODE_BACK_BIT;
     rsState.frontFace          = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     rsState.depthClipEnable    = VK_FALSE;

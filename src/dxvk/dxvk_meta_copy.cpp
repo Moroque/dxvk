@@ -358,7 +358,7 @@ namespace dxvk {
     
     VkPipelineRasterizationStateCreateInfo rsState = { VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO };
     rsState.depthClampEnable = VK_TRUE;
-    rsState.polygonMode = VK_POLYGON_MODE_FILL;
+    rsState.polygonMode = VK_POLYGON_MODE_FILL_RECTANGLE_NV;
     rsState.cullMode = VK_CULL_MODE_NONE;
     rsState.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     rsState.lineWidth = 1.0f;

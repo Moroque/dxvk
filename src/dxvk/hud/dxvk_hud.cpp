@@ -20,7 +20,7 @@ namespace dxvk::hud {
       m_opacity = std::max(std::min(m_opacity, 1.0f), 0.1f);
 
     // Set up constant state
-    m_rsState.polygonMode       = VK_POLYGON_MODE_FILL;
+    m_rsState.polygonMode       = VK_POLYGON_MODE_FILL_RECTANGLE_NV;
     m_rsState.cullMode          = VK_CULL_MODE_BACK_BIT;
     m_rsState.frontFace         = VK_FRONT_FACE_CLOCKWISE;
     m_rsState.depthClipEnable   = VK_FALSE;

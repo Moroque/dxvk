@@ -1145,7 +1145,7 @@ namespace dxvk {
     // states dynamically since they are generally not used
     bool isLineRendering = DxvkGraphicsPipelinePreRasterizationState::isLineRendering(state, m_shaders.tes.ptr(), m_shaders.gs.ptr());
 
-    if (state.rs.polygonMode() != VK_POLYGON_MODE_FILL
+    if (state.rs.polygonMode() != VK_POLYGON_MODE_FILL_RECTANGLE_NV
      || state.rs.conservativeMode() != VK_CONSERVATIVE_RASTERIZATION_MODE_DISABLED_EXT
      || (state.rs.lineMode() != VK_LINE_RASTERIZATION_MODE_DEFAULT_EXT && isLineRendering))
       return false;
