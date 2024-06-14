@@ -15,6 +15,7 @@ namespace dxvk {
   D3D9FixedFunctionOptions::D3D9FixedFunctionOptions(const D3D9Options* options) {
     invariantPosition = options->invariantPosition;
     forceSampleRateShading = options->forceSampleRateShading;
+    drefScaling = options->drefScaling;
   }
 
   uint32_t DoFixedFunctionFog(D3D9ShaderSpecConstantManager& spec, SpirvModule& spvModule, const D3D9FogContext& fogCtx) {
@@ -1139,12 +1140,12 @@ namespace dxvk {
 
         case (DXVK_TSS_TCI_CAMERASPACENORMAL >> TCIOffset):
           transformed = outNrm;
-          count = 4;
+          count = std::min(flags, 4u);
           break;
 
         case (DXVK_TSS_TCI_CAMERASPACEPOSITION >> TCIOffset):
           transformed = m_module.opCompositeInsert(m_vec4Type, m_module.constf32(1.0f), vtx, 1, &wIndex);
-          count = 4;
+          count = std::min(flags, 4u);
           break;
 
         case (DXVK_TSS_TCI_CAMERASPACEREFLECTIONVECTOR >> TCIOffset): {
@@ -1159,7 +1160,7 @@ namespace dxvk {
           transformIndices[3] = m_module.constf32(1.0f);
 
           transformed = m_module.opCompositeConstruct(m_vec4Type, transformIndices.size(), transformIndices.data());
-          count = 4;
+          count = std::min(flags, 4u);
           break;
         }
 
@@ -1183,35 +1184,42 @@ namespace dxvk {
           transformIndices[3] = m_module.constf32(1.0f);
 
           transformed = m_module.opCompositeConstruct(m_vec4Type, transformIndices.size(), transformIndices.data());
-          count = 4;
+          count = std::min(flags, 4u);
           break;
         }
       }
 
-      if (applyTransform || (count != 4 && count != 0)) {
-        if (applyTransform && !m_vsKey.Data.Contents.HasPositionT) {
-          for (uint32_t j = count; j < 4; j++) {
-            // If we're outside the component count of the vertex decl for this texcoord then we pad with zeroes.
-            // Otherwise, pad with ones.
+      if (applyTransform && !m_vsKey.Data.Contents.HasPositionT) {
+        for (uint32_t j = count; j < 4; j++) {
+          // If we're outside the component count of the vertex decl for this texcoord then we pad with zeroes.
+          // Otherwise, pad with ones.
 
-            // Very weird quirk in order to get texcoord transforms to work like they do in native.
-            // In future, maybe we could sort this out properly by chopping matrices of different sizes, but thats
-            // a project for another day.
-            uint32_t texcoordCount = (m_vsKey.Data.Contents.TexcoordDeclMask >> (3 * inputIndex)) & 0x7;
-            uint32_t value = j > texcoordCount ? m_module.constf32(0) : m_module.constf32(1);
-            transformed = m_module.opCompositeInsert(m_vec4Type, value, transformed, 1, &j);
-          }
-
-          transformed = m_module.opVectorTimesMatrix(m_vec4Type, transformed, m_vs.constants.texcoord[i]);
+          // Very weird quirk in order to get texcoord transforms to work like they do in native.
+          // In future, maybe we could sort this out properly by chopping matrices of different sizes, but thats
+          // a project for another day.
+          uint32_t texcoordCount = (m_vsKey.Data.Contents.TexcoordDeclMask >> (3 * inputIndex)) & 0x7;
+          uint32_t value = j > texcoordCount ? m_module.constf32(0) : m_module.constf32(1);
+          transformed = m_module.opCompositeInsert(m_vec4Type, value, transformed, 1, &j);
         }
 
-        // Pad the unused section of it with the value for projection.
-        uint32_t projIdx = std::max(2u, count - 1);
-        uint32_t projValue = m_module.opCompositeExtract(m_floatType, transformed, 1, &projIdx);
-
-        for (uint32_t j = count; j < 4; j++)
-          transformed = m_module.opCompositeInsert(m_vec4Type, projValue, transformed, 1, &j);
+        transformed = m_module.opVectorTimesMatrix(m_vec4Type, transformed, m_vs.constants.texcoord[i]);
       }
+
+      // The projection idx is always based on the flags, even when the input mode is not DXVK_TSS_TCI_PASSTHRU.
+      uint32_t projValue;
+      if (count < 3) {
+        // Not enough components to do projection.
+        // Native drivers render normally or garbage with D3DFVF_TEXCOORDSIZE2 or D3DTTFF_COUNT <3
+        projValue = m_module.constf32(1.0f);
+      } else {
+        uint32_t projIdx = count - 1;
+        projValue = m_module.opCompositeExtract(m_floatType, transformed, 1, &projIdx);
+      }
+
+      // The w component is only used for projection or unused, so always insert the component that's supposed to be divided by there.
+      // The fragment shader will then decide whether to project or not.
+      uint32_t wIdx = 3;
+      transformed = m_module.opCompositeInsert(m_vec4Type, projValue, transformed, 1, &wIdx);
 
       m_module.opStore(m_vs.out.TEXCOORD[i], transformed);
     }
@@ -1784,6 +1792,11 @@ namespace dxvk {
         return coords;
       };
 
+      auto ScalarReplicate = [&](uint32_t reg) {
+        std::array<uint32_t, 4> replicant = { reg, reg, reg, reg };
+        return m_module.opCompositeConstruct(m_vec4Type, replicant.size(), replicant.data());
+      };
+
       auto GetTexture = [&]() {
         if (!processedTexture) {
           SpirvImageOperands imageOperands;
@@ -1827,10 +1840,23 @@ namespace dxvk {
             shouldProject = false;
           }
 
-          if (shouldProject)
+          if (unlikely(stage.SampleDref)) {
+            uint32_t component = 2;
+            uint32_t reference = m_module.opCompositeExtract(m_floatType, texcoord, 1, &component);
+
+            // [D3D8] Scale Dref to [0..(2^N - 1)] for D24S8 and D16 if Dref scaling is enabled
+            if (m_options.drefScaling) {
+              uint32_t maxDref = m_module.constf32(1.0f / (float(1 << m_options.drefScaling) - 1.0f));
+              reference        = m_module.opFMul(m_floatType, reference, maxDref);
+            }
+
+            texture = m_module.opImageSampleDrefImplicitLod(m_floatType, imageVarId, texcoord, reference, imageOperands);
+            texture = ScalarReplicate(texture);
+          } else if (shouldProject) {
             texture = m_module.opImageSampleProjImplicitLod(m_vec4Type, imageVarId, texcoord, imageOperands);
-          else
+          } else {
             texture = m_module.opImageSampleImplicitLod(m_vec4Type, imageVarId, texcoord, imageOperands);
+          }
 
           if (i != 0 && m_fsKey.Stages[i - 1].Contents.ColorOp == D3DTOP_BUMPENVMAPLUMINANCE) {
             uint32_t index = m_module.constu32(D3D9SharedPSStages_Count * (i - 1) + D3D9SharedPSStages_BumpEnvLScale);
@@ -1856,11 +1882,6 @@ namespace dxvk {
         processedTexture = true;
 
         return texture;
-      };
-
-      auto ScalarReplicate = [&](uint32_t reg) {
-        std::array<uint32_t, 4> replicant = { reg, reg, reg, reg };
-        return m_module.opCompositeConstruct(m_vec4Type, replicant.size(), replicant.data());
       };
 
       auto AlphaReplicate = [&](uint32_t reg) {
@@ -2259,6 +2280,11 @@ namespace dxvk {
           dimensionality = spv::Dim2D;
           sampler.texcoordCnt = 2;
           viewType       = VK_IMAGE_VIEW_TYPE_2D;
+
+          // Z coordinate for Dref sampling
+          if (m_fsKey.Stages[i].Contents.SampleDref)
+            sampler.texcoordCnt++;
+
           break;
         case D3DRTYPE_CUBETEXTURE:
           dimensionality = spv::DimCube;

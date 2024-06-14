@@ -99,7 +99,8 @@ namespace dxvk {
 
     if (riid == __uuidof(IUnknown)
      || riid == __uuidof(IDXGIVkSwapChain)
-     || riid == __uuidof(IDXGIVkSwapChain1)) {
+     || riid == __uuidof(IDXGIVkSwapChain1)
+     || riid == __uuidof(IDXGIVkSwapChain2)) {
       *ppvObject = ref(this);
       return S_OK;
     }
@@ -375,6 +376,15 @@ namespace dxvk {
     return m_presenter->lowLatencyEnabled();
   }
 
+  void STDMETHODCALLTYPE D3D11SwapChain::SetTargetFrameRate(
+          double                    FrameRate) {
+    m_targetFrameRate = FrameRate;
+
+    if (m_presenter != nullptr)
+      m_presenter->setFrameRateLimit(m_targetFrameRate);
+  }
+
+
   HRESULT D3D11SwapChain::PresentImage(UINT SyncInterval) {
     // Flush pending rendering commands before
     auto immediateContext = m_parent->GetContext();
@@ -526,7 +536,7 @@ namespace dxvk {
     presenterDesc.fullScreenExclusive = PickFullscreenMode();
 
     m_presenter = new Presenter(m_device, m_frameLatencySignal, presenterDesc);
-    m_presenter->setFrameRateLimit(m_parent->GetOptions()->maxFrameRate);
+    m_presenter->setFrameRateLimit(m_targetFrameRate);
   }
 
 
