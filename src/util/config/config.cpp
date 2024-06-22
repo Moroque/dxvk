@@ -945,6 +945,26 @@ namespace dxvk {
     { R"(\\prototypef\.exe$)", {{ 
       { "d3d9.supportDFFormats",            "False" },
     }} },
+    /* STAR WARS: The Force Unleashed            *
+     * Prevents black screen on each alt-tab     */
+    { R"(\\SWTFU\.exe$)", {{ 
+      { "d3d9.deviceLossOnFocusLoss",       "True" },
+    }} },
+    /* Fallout New Vegas - Various visual issues *
+     * with mods such as New Vegas Reloaded      */
+    { R"(\\FalloutNV\.exe$)", {{ 
+      { "d3d9.floatEmulation",              "Strict" },
+    }} },
+    /* Dungeons and Dragons: Dragonshard         *
+     * Massive FPS decreases in some scenes      */
+    { R"(\\Dragonshard\.exe$)", {{ 
+      { "d3d9.cachedDynamicBuffers",        "True" },
+    }} },
+    /* Guild Wars 1 - Alt-tab black screen when  *
+     * fullscreen with non native resolution     */
+    { R"(\\Gw\.exe$)", {{ 
+      { "d3d9.deviceLossOnFocusLoss",       "True" },
+    }} },
 
 
     /**********************************************/
