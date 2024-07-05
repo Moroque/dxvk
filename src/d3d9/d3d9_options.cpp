@@ -290,7 +290,7 @@ namespace dxvk {
       : (adapter != nullptr ? adapter->deviceProperties().vendorID : 0);
 
     this->maxFrameLatency               = config.getOption<int32_t>     ("d3d9.maxFrameLatency",               0);
-    this->maxFrameRate                  = config.getOption<int32_t>     ("dxvk.maxFrameRate",                  0);
+    this->maxFrameRate                  = config.getOption<int32_t>     ("d3d9.maxFrameRate",                  0);
     this->presentInterval               = config.getOption<int32_t>     ("d3d9.presentInterval",               -1);
     this->shaderModel                   = config.getOption<int32_t>     ("d3d9.shaderModel",                   3);
     this->dpiAware                      = config.getOption<bool>        ("d3d9.dpiAware",                      true);
@@ -301,9 +301,9 @@ namespace dxvk {
     this->deferSurfaceCreation          = config.getOption<bool>        ("d3d9.deferSurfaceCreation",          false);
     this->samplerAnisotropy             = config.getOption<int32_t>     ("d3d9.samplerAnisotropy",             -1);
     this->maxAvailableMemory            = config.getOption<int32_t>     ("d3d9.maxAvailableMemory",            4096);
-    this->supportDFFormats              = config.getOption<bool>        ("d3d9.supportDFFormats",              vendorId != uint32_t(DxvkGpuVendor::Nvidia));
+    this->supportDFFormats              = config.getOption<bool>        ("d3d9.supportDFFormats",              true);
     this->supportX4R4G4B4               = config.getOption<bool>        ("d3d9.supportX4R4G4B4",               true);
-    this->supportD32                    = config.getOption<bool>        ("d3d9.supportD32",                    true);
+    this->supportD16Lockable            = config.getOption<bool>        ("d3d9.supportD16Lockable",            false);
     this->useD32forD24                  = config.getOption<bool>        ("d3d9.useD32forD24",                  false);
     this->disableA8RT                   = config.getOption<bool>        ("d3d9.disableA8RT",                   false);
     this->invariantPosition             = config.getOption<bool>        ("d3d9.invariantPosition",             true);

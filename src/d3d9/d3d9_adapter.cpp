@@ -227,14 +227,14 @@ namespace dxvk {
     if (!IsDepthFormat(DepthStencilFormat))
       return D3DERR_NOTAVAILABLE;
 
-    auto dsfMapping = ConvertFormatUnfixed(DepthStencilFormat);
+    auto dsfMapping = GetFormatMapping(DepthStencilFormat);
     if (dsfMapping.FormatColor == VK_FORMAT_UNDEFINED)
       return D3DERR_NOTAVAILABLE;
 
     if (RenderTargetFormat == dxvk::D3D9Format::NULL_FORMAT)
       return D3D_OK;
 
-    auto rtfMapping = ConvertFormatUnfixed(RenderTargetFormat);
+    auto rtfMapping = GetFormatMapping(RenderTargetFormat);
     if (rtfMapping.FormatColor == VK_FORMAT_UNDEFINED)
       return D3DERR_NOTAVAILABLE;
 
@@ -277,6 +277,8 @@ namespace dxvk {
       return D3DERR_INVALIDCALL;
 
     auto& options = m_parent->GetOptions();
+
+    const VkPhysicalDeviceLimits& limits = m_adapter->deviceProperties().limits;
 
     // TODO: Actually care about what the adapter supports here.
     // ^ For Intel and older cards most likely here.
@@ -538,7 +540,7 @@ namespace dxvk {
     // Max Vertex Blend Matrix Index
     pCaps->MaxVertexBlendMatrixIndex = 0;
     // Max Point Size
-    pCaps->MaxPointSize              = 256.0f;
+    pCaps->MaxPointSize              = limits.pointSizeRange[1];
     // Max Primitive Count
     pCaps->MaxPrimitiveCount         = 0x00ffffff;
     // Max Vertex Index
