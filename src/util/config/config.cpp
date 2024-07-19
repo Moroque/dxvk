@@ -17,6 +17,49 @@ namespace dxvk {
 
 
   const static ProfileList g_profiles = {{
+    /**********************************************/
+    /* D3D12 GAMES (vkd3d-proton with dxvk dxgi)  */
+    /**********************************************/
+
+    /* Diablo 4 - Will complain about missing  *
+     * GPU unless dxgi Id match actual GPU Id  */
+    { R"(\\Diablo IV\.exe$)", {{
+      { "dxgi.hideNvidiaGpu",               "False"  },
+    }} },
+    /* WILD HEARTS™️                            *
+     * D3D12 title using D3D11 device for      *
+     * media texture creation, whereby a large *
+     * chunk size only slows down media        *
+     * initialization                          */
+    { R"(\\WILD HEARTS(_Trial)?\.exe$)", {{
+      { "dxvk.maxChunkSize",                 "4" },
+    }} },
+    /* Ratchet & Clank: Rift Apart - does not allow
+     * enabling ray tracing if it sees an AMD GPU. */
+    { R"(\\RiftApart\.exe$)", {{
+      { "dxgi.hideNvidiaGpu",               "False" },
+    }} },
+    /* Metro Exodus Enhanced Edition picks GPU adapters
+     * by available VRAM, which causes issues on some
+     * systems with integrated graphics. */
+    { R"(\\Metro Exodus Enhanced Edition\\MetroExodus\.exe$)", {{
+      { "dxvk.hideIntegratedGraphics",      "True" },
+    }} },
+    /* Persona 3 Reload - disables vsync by default and
+     * runs into severe frame latency issues on Deck. */
+    { R"(\\P3R\.exe$)", {{
+      { "dxgi.syncInterval",                "1" },
+    }} },
+
+    /**********************************************/
+    /* D3D11 GAMES                                */
+    /**********************************************/
+
+    /* Batman Arkham Knight - doesn't like intel vendor id 
+      (refuses to boot if vendor isn't 0x10de or 0x1002)  */
+    { R"(\\BatmanAK\.exe$)", {{
+      { "dxgi.hideIntelGpu",                "True" },
+    }} },
     /* Assassin's Creed Syndicate: amdags issues  */
     { R"(\\ACS\.exe$)", {{
       { "dxgi.customVendorId",              "10de" },
@@ -961,7 +1004,8 @@ namespace dxvk {
     }} },
     /* Battle for Middle-earth 2 and expansion   *
      * Slowdowns in certain scenarios            */
-    { R"(\\(The Battle for Middle-earth (\(tm\))? II( Demo)?|The Lord of the Rings, The Rise of the Witch-king)\\game\.dat$)", {{
+    { R"(\\(The Battle for Middle-earth( \(tm\))? II( Demo)?)"
+      R"(|The Lord of the Rings, The Rise of the Witch-king)\\game\.dat$)", {{
       { "d3d9.cachedDynamicBuffers",        "True" },
     }} },
     /* WRC4 - Audio breaks above 60fps */
@@ -1141,6 +1185,11 @@ namespace dxvk {
     /* Rise of Nations + Expansion - alt-tab crash*/
     { R"(\\(nations|patriots)\.exe$)", {{
       { "d3d9.deviceLossOnFocusLoss",       "True" },
+    }} },
+    /* Inquisitor (2009)                          *
+     * Leaks a resource when alt-tabbing          */
+    { R"(\\Inquisitor\.exe$)", {{
+      { "d3d9.countLosableResources",      "False" },
     }} },
   }};
 
