@@ -7293,11 +7293,12 @@ namespace dxvk {
     const D3D9CommonTexture* tex = GetCommonTexture(m_state.textures[Sampler]);
 
     EmitCs([this,
-      cSlot     = slot,
-      cState    = D3D9SamplerInfo(m_state.samplerStates[Sampler]),
-      cIsCube   = tex && tex->IsCube(),
-      cIsDepth  = bool(m_textureSlotTracking.depth & (1u << Sampler)),
-      cBindId   = m_samplerBindCount
+      cSlot       = slot,
+      cState      = D3D9SamplerInfo(m_state.samplerStates[Sampler]),
+      cIsCube     = tex && tex->IsCube(),
+      cIsMultiMip = tex && (tex->Desc()->MipLevels > 1u),
+      cIsDepth    = bool(m_textureSlotTracking.depth & (1u << Sampler)),
+      cBindId     = m_samplerBindCount
     ] (DxvkContext* ctx) {
       DxvkSamplerKey key = { };
 
@@ -7323,13 +7324,14 @@ namespace dxvk {
       key.setDepthCompare(cIsDepth, VK_COMPARE_OP_LESS_OR_EQUAL);
 
       if (cState.mipFilter) {
-        // Anisotropic filtering doesn't make any sense with only one mip
         uint32_t anisotropy = cState.maxAnisotropy;
 
-        if (cState.minFilter != D3DTEXF_ANISOTROPIC)
+        // Anisotropic filtering doesn't make any sense with only one mip
+        if (cState.minFilter != D3DTEXF_ANISOTROPIC || !cIsMultiMip)
           anisotropy = 0u;
 
-        if (m_d3d9Options.samplerAnisotropy != -1 && cState.minFilter > D3DTEXF_POINT)
+        // Forcing anisotropic filtering doesn't make any sense with only one mip
+        if (m_d3d9Options.samplerAnisotropy != -1 && cIsMultiMip && cState.minFilter > D3DTEXF_POINT)
           anisotropy = m_d3d9Options.samplerAnisotropy;
 
         key.setAniso(anisotropy);
@@ -7696,7 +7698,7 @@ namespace dxvk {
   const D3D9CommonShader*                 pShaderModule) {
     auto shader = pShaderModule->GetShader();
 
-    if (unlikely(shader->needsLibraryCompile()))
+    if (unlikely(shader->needsCompile()))
       m_dxvkDevice->requestCompileShader(shader);
 
     EmitCs([

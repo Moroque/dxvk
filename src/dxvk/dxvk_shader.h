@@ -70,7 +70,7 @@ namespace dxvk {
   /**
    * \brief Shader module create info
    */
-  struct DxvkShaderModuleCreateInfo {
+  struct DxvkShaderLinkage {
     bool      fsDualSrcBlend  = false;
     bool      fsFlatShading   = false;
     VkPrimitiveTopology inputTopology = VK_PRIMITIVE_TOPOLOGY_MAX_ENUM;
@@ -79,7 +79,7 @@ namespace dxvk {
 
     std::array<VkComponentMapping, MaxNumRenderTargets> rtSwizzles = { };
 
-    bool eq(const DxvkShaderModuleCreateInfo& other) const;
+    bool eq(const DxvkShaderLinkage& other) const;
 
     size_t hash() const;
   };
@@ -111,6 +111,17 @@ namespace dxvk {
     }
 
     /**
+     * \brief Retrieves shader cookie
+     *
+     * Unique value identifying the shader object that
+     * can be used for look-up purposes.
+     * \returns Unique shader cookie
+     */
+    size_t getCookie() const {
+      return m_cookie;
+    }
+
+    /**
      * \brief Shader metadata
      * \returns Shader metadata
      */
@@ -119,46 +130,27 @@ namespace dxvk {
     }
 
     /**
-     * \brief Queries shader binding layout
-     * \returns Pipeline layout builder
-     */
-    virtual DxvkPipelineLayoutBuilder getLayout() const = 0;
-
-    /**
      * \brief Tests whether this shader needs to be compiled
      *
      * If pipeline libraries are supported, this will return
      * \c false once the pipeline library is being compiled.
      * \returns \c true if compilation is still needed
      */
-    bool needsLibraryCompile() const {
-      return m_needsLibraryCompile.load();
+    bool needsCompile() const {
+      return m_needsCompile.load();
     }
 
     /**
      * \brief Notifies library compile
      *
-     * Called automatically when pipeline compilation begins.
-     * Subsequent calls to \ref needsLibraryCompile will return
-     * \c false.
+     * Called automatically when pipeline compilation begins. Returns
+     * the previous state of the compile flag, which will be \c true
+     * if compilation is still required, and \c false otherwise.
      */
-    void notifyLibraryCompile() {
-      m_needsLibraryCompile.store(false);
+    bool notifyCompile() {
+      return m_needsCompile.exchange(false);
     }
 
-    /**
-     * \brief Patches code using given info
-     *
-     * Rewrites binding IDs and potentially fixes up other
-     * parts of the code depending on pipeline state.
-     * \param [in] bindings Biding map
-     * \param [in] state Pipeline state info
-     * \returns Uncompressed SPIR-V code buffer
-     */
-    virtual SpirvCodeBuffer getCode(
-      const DxvkShaderBindingMap*       bindings,
-      const DxvkShaderModuleCreateInfo& state) const = 0;
-    
     /**
      * \brief Tests whether this shader supports pipeline libraries
      *
@@ -172,6 +164,25 @@ namespace dxvk {
     bool canUsePipelineLibrary(bool standalone) const;
 
     /**
+     * \brief Queries shader binding layout
+     * \returns Pipeline layout builder
+     */
+    virtual DxvkPipelineLayoutBuilder getLayout() const = 0;
+
+    /**
+     * \brief Retrieves SPIR-V code for the given shader
+     *
+     * Creates the final shader binary with the given binding
+     * mapping and pipeline state information.
+     * \param [in] bindings Biding map
+     * \param [in] linkage Pipeline state info
+     * \returns Uncompressed SPIR-V code
+     */
+    virtual SpirvCodeBuffer getCode(
+      const DxvkShaderBindingMap*       bindings,
+      const DxvkShaderLinkage*          linkage) const = 0;
+
+    /**
      * \brief Dumps SPIR-V shader
      * 
      * Can be used to store the SPIR-V code in a file.
@@ -179,18 +190,6 @@ namespace dxvk {
      */
     virtual void dump(std::ostream& outputStream) const = 0;
 
-    /**
-     * \brief Get lookup hash
-     * 
-     * Retrieves a non-unique hash value derived from the
-     * shader key which can be used to perform lookups.
-     * This is better than relying on the pointer value.
-     * \returns Hash value for map lookups
-     */
-    size_t getCookie() const {
-      return m_cookie;
-    }
-    
     /**
      * \brief Retrieves debug name
      * \returns The shader's name
@@ -216,22 +215,21 @@ namespace dxvk {
     std::atomic<uint32_t>         m_refCount = { 0u };
     uint32_t                      m_cookie = 0;
 
+    std::atomic<bool>             m_needsCompile = { true };
+
   protected:
 
     DxvkShaderMetadata            m_metadata = { };
-
-    std::atomic<bool>             m_needsLibraryCompile = { true };
 
   };
   
 
   /**
-   * \brief Shader module object
+   * \brief Shader code collection
    * 
-   * Manages a Vulkan shader module. This will not
-   * perform any shader compilation. Instead, the
-   * context will create pipeline objects on the
-   * fly when executing draw calls.
+   * Manages shader stage and shader module create structures that can
+   * be passed to pipeline creation. Vulkan shader modules are not used,
+   * instead we rely on maintenance5 functionality.
    */
   class DxvkShaderStageInfo {
     

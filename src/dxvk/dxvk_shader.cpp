@@ -14,7 +14,7 @@ namespace dxvk {
   std::atomic<uint32_t> DxvkShader::s_cookie = { 0u };
 
 
-  bool DxvkShaderModuleCreateInfo::eq(const DxvkShaderModuleCreateInfo& other) const {
+  bool DxvkShaderLinkage::eq(const DxvkShaderLinkage& other) const {
     bool eq = fsDualSrcBlend == other.fsDualSrcBlend
            && fsFlatShading == other.fsFlatShading
            && !prevStageOutputs == !other.prevStageOutputs;
@@ -37,7 +37,7 @@ namespace dxvk {
   }
 
 
-  size_t DxvkShaderModuleCreateInfo::hash() const {
+  size_t DxvkShaderLinkage::hash() const {
     DxvkHashState hash;
     hash.add(uint32_t(fsDualSrcBlend));
     hash.add(uint32_t(fsFlatShading));
@@ -655,7 +655,7 @@ namespace dxvk {
       ? DxvkPipelineLayoutType::Merged
       : DxvkPipelineLayoutType::Independent;
 
-    return shader->getCode(m_layout.getBindingMap(layoutType), DxvkShaderModuleCreateInfo());
+    return shader->getCode(m_layout.getBindingMap(layoutType), nullptr);
   }
 
 
@@ -759,14 +759,14 @@ namespace dxvk {
       // Only notify the shader itself if we're actually
       // building the shader's standalone pipeline library
       if (!m_shaders.tcs && !m_shaders.tes && !m_shaders.gs)
-        m_shaders.vs->notifyLibraryCompile();
+        m_shaders.vs->notifyCompile();
     }
 
     if (m_shaders.fs)
-      m_shaders.fs->notifyLibraryCompile();
+      m_shaders.fs->notifyCompile();
 
     if (m_shaders.cs)
-      m_shaders.cs->notifyLibraryCompile();
+      m_shaders.cs->notifyCompile();
   }
 
 
