@@ -33,6 +33,7 @@ namespace dxvk {
     lowLatencyAllowCpuFramesOverlap
                           = config.getOption<bool>    ("dxvk.lowLatencyAllowCpuFramesOverlap", true);
     deviceFilter          = config.getOption<std::string>("dxvk.deviceFilter",        "");
+    lowerSinCos           = config.getOption<Tristate>("dxvk.lowerSinCos",            Tristate::Auto);
     tilerMode             = config.getOption<Tristate>("dxvk.tilerMode",              Tristate::Auto);
 
     auto budget = config.getOption<int32_t>("dxvk.maxMemoryBudget", 0);

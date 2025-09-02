@@ -51,7 +51,7 @@ namespace dxvk {
 
   SpirvCodeBuffer DxvkSpirvShader::getCode(
     const DxvkShaderBindingMap*       bindings,
-    const DxvkShaderLinkage*          linkage) const {
+    const DxvkShaderLinkage*          linkage) {
     SpirvCodeBuffer spirvCode = m_code.decompress();
     patchResourceBindingsAndIoLocations(spirvCode, bindings, linkage);
 
@@ -59,8 +59,8 @@ namespace dxvk {
     if (linkage) {
       uint32_t undefinedInputs = 0u;
 
-      if (m_metadata.stage != VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT && linkage->prevStageOutputs) {
-        auto producedMask = linkage->prevStageOutputs->computeMask();
+      if (m_metadata.stage != VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT) {
+        auto producedMask = linkage->prevStageOutputs.computeMask();
         auto consumedMask = m_metadata.inputs.computeMask();
 
         auto definedMask = producedMask & consumedMask;
@@ -90,7 +90,7 @@ namespace dxvk {
   }
 
 
-  void DxvkSpirvShader::dump(std::ostream& outputStream) const {
+  void DxvkSpirvShader::dump(std::ostream& outputStream) {
     m_code.decompress().store(outputStream);
   }
 

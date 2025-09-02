@@ -71,7 +71,7 @@ namespace dxvk {
      */
     SpirvCodeBuffer getCode(
       const DxvkShaderBindingMap*       bindings,
-      const DxvkShaderLinkage*          linkage) const;
+      const DxvkShaderLinkage*          linkage);
 
     /**
      * \brief Queries shader binding layout
@@ -85,7 +85,7 @@ namespace dxvk {
      * \brief Dumps SPIR-V binary to a stream
      * \param [in] outputStream Stream to write to
      */
-    void dump(std::ostream& outputStream) const;
+    void dump(std::ostream& outputStream);
 
     /**
      * \brief Retrieves debug name for this shader
