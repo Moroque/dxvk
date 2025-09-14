@@ -80,7 +80,6 @@ namespace dxvk {
     DirtyFFPixelShader,
     DirtyFFViewport,
     DirtyFFPixelData,
-    DirtyProgVertexShader,
     DirtySharedPixelShaderData,
     ValidSampleMask,
     DirtyDepthBounds,
@@ -1091,7 +1090,10 @@ namespace dxvk {
 
     template <DxsoProgramType ShaderStage>
     void BindShader(
-      const D3D9CommonShader*                 pShaderModule);
+    const D3D9CommonShader*                 pShaderModule);
+
+    template <DxsoProgramType ShaderStage>
+    void BindFFUbershader();
 
     void BindInputLayout();
 
@@ -1480,10 +1482,13 @@ namespace dxvk {
     void UpdateAlphaTestSpec(VkCompareOp alphaOp, uint32_t precision);
     void UpdateVertexBoolSpec(uint32_t value);
     void UpdatePixelBoolSpec(uint32_t value);
-    void UpdatePixelShaderSamplerSpec(uint32_t types, uint32_t projections, uint32_t fetch4);
-    void UpdateCommonSamplerSpec(uint32_t boundMask, uint32_t depthMask, uint32_t drefMask);
+    void UpdatePixelShaderSamplerSpec(uint32_t types, uint32_t fetch4);
+    void UpdateCommonSamplerSpec(uint32_t boundMask, uint32_t depthMask, uint32_t drefMask, uint32_t projections);
     void UpdatePointModeSpec(uint32_t mode);
     void UpdateFogModeSpec(bool fogEnabled, D3DFOGMODE vertexFogMode, D3DFOGMODE pixelFogMode);
+
+    D3D9FFShaderKeyVS BuildFFKeyVS(D3D9FF_VertexBlendMode vertexBlendMode, bool indexedVertexBlend) const;
+    D3D9FFShaderKeyFS BuildFFKeyFS() const;
 
     void BindSpecConstants();
 

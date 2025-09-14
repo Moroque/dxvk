@@ -54,7 +54,15 @@ namespace dxvk {
      * \returns Shader stage
      */
     VkShaderStageFlagBits stage() const {
-      return m_stage;
+      return VkShaderStageFlagBits(m_stage);
+    }
+
+    /**
+     * \brief Whether shader was created using streamout metadata
+     * \returns \c true if the shader has transform feedback metadata
+     */
+    bool hasXfb() const {
+      return m_xfb;
     }
 
     /**
@@ -79,7 +87,8 @@ namespace dxvk {
 
   private:
 
-    VkShaderStageFlagBits     m_stage = VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM;
+    uint16_t                  m_stage = -1;
+    uint16_t                  m_xfb   = 0u;
     uint32_t                  m_size  = 0u;
     std::array<uint32_t, 4u>  m_hash  = { };
 

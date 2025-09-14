@@ -24,6 +24,8 @@ namespace dxvk {
     int32_t xfbRasterizedStream = 0;
     /// Tess control patch vertex count
     uint32_t patchVertexCount = 0;
+    /// Manually assigned debug name
+    std::string debugName;
   };
 
 
@@ -61,6 +63,17 @@ namespace dxvk {
     ~DxvkSpirvShader();
 
     /**
+     * \brief Queries shader metadata
+     * \returns Shader metadata
+     */
+    DxvkShaderMetadata getShaderMetadata();
+
+    /**
+     * \brief Called when the shader itself needs to be compiled
+     */
+    void compile();
+
+    /**
      * \brief Patches code using given info
      *
      * Rewrites binding IDs and potentially fixes up other
@@ -77,9 +90,7 @@ namespace dxvk {
      * \brief Queries shader binding layout
      * \returns Pipeline layout builder
      */
-    DxvkPipelineLayoutBuilder getLayout() const {
-      return m_layout;
-    }
+    DxvkPipelineLayoutBuilder getLayout();
 
     /**
      * \brief Dumps SPIR-V binary to a stream
@@ -91,7 +102,7 @@ namespace dxvk {
      * \brief Retrieves debug name for this shader
      * \returns Shader debug name
      */
-    std::string debugName() const;
+    std::string debugName();
 
   private:
 
@@ -102,6 +113,8 @@ namespace dxvk {
 
     std::string                   m_debugName;
     uint32_t                      m_pushConstantStructId = 0u;
+
+    DxvkShaderMetadata            m_metadata = { };
 
     std::unordered_multimap<uint32_t, DxvkSpirvDecorations> m_decorations = { };
     std::unordered_map<uint32_t, uint32_t> m_idToOffset = { };

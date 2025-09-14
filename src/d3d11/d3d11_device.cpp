@@ -2,6 +2,7 @@
 #include <cstring>
 
 #include <dxbc/dxbc_container.h>
+#include <dxbc/dxbc_parser.h>
 #include <dxbc/dxbc_signature.h>
 
 #include "../dxgi/dxgi_monitor.h"
@@ -1889,33 +1890,196 @@ namespace dxvk {
       return E_INVALIDARG;
     }
 
-    D3D11CommonShader commonShader;
+    // Parse dxbc binary and I/O signatures and validate that all
+    // features used by the shader are enabled on the device
+    dxbc_spv::dxbc::Parser parser(container.getCodeChunk());
+    dxbc_spv::dxbc::ShaderInfo shaderInfo = parser.getShaderInfo();
+
+    auto [hi, lo] = shaderInfo.getVersion();
+
+    if ((hi > 5u) || (hi == 5u && lo) || (hi == 4u && lo > 1u) || hi < 4u)
+      throw DxvkError(str::format("Invalid shader model: ", hi, "_", lo));
+
+    // Check whether the stage matches or if we can create a pass-through GS
+    auto shaderStage = [] (dxbc_spv::dxbc::ShaderType type) {
+      switch (type) {
+        case dxbc_spv::dxbc::ShaderType::eVertex:   return VK_SHADER_STAGE_VERTEX_BIT;
+        case dxbc_spv::dxbc::ShaderType::eHull:     return VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+        case dxbc_spv::dxbc::ShaderType::eDomain:   return VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+        case dxbc_spv::dxbc::ShaderType::eGeometry: return VK_SHADER_STAGE_GEOMETRY_BIT;
+        case dxbc_spv::dxbc::ShaderType::ePixel:    return VK_SHADER_STAGE_FRAGMENT_BIT;
+        case dxbc_spv::dxbc::ShaderType::eCompute:  return VK_SHADER_STAGE_COMPUTE_BIT;
+      }
+
+      return VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM;
+    } (shaderInfo.getType());
+
+    if (ShaderKey.stage() != shaderStage) {
+      bool mismatch = !ShaderKey.hasXfb() || (
+        shaderStage != VK_SHADER_STAGE_VERTEX_BIT &&
+        shaderStage != VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT);
+
+      if (mismatch) {
+        Logger::warn(str::format("D3D11: ", ShaderKey.toString(), ": Source shader is of incompatible type: ", shaderInfo.getType()));
+        return E_INVALIDARG;
+      }
+    }
+
+    dxbc_spv::dxbc::Instruction icbOp = { };
+
+    DxbcBindingMask bindingMask;
+
+    while (parser) {
+      auto op = parser.parseInstruction();
+
+      if (!op)
+        return E_INVALIDARG;
+
+      switch (op.getOpToken().getOpCode()) {
+        case dxbc_spv::dxbc::OpCode::eCustomData: {
+          if (op.getOpToken().getCustomDataType() == dxbc_spv::dxbc::CustomDataType::eDclIcb)
+            icbOp = std::move(op);
+        } break;
+
+        case dxbc_spv::dxbc::OpCode::eDclSampler: {
+          uint32_t index = op.getDst(0u).getIndex(0u);
+          bindingMask.samplerMask |= 1u << index;
+        } break;
+
+        case dxbc_spv::dxbc::OpCode::eDclConstantBuffer: {
+          uint32_t index = op.getDst(0u).getIndex(0u);
+          bindingMask.cbvMask |= 1u << index;
+        } break;
+
+        case dxbc_spv::dxbc::OpCode::eDclResource:
+        case dxbc_spv::dxbc::OpCode::eDclResourceRaw:
+        case dxbc_spv::dxbc::OpCode::eDclResourceStructured: {
+          uint32_t index = op.getDst(0u).getIndex(0u);
+          bindingMask.srvMask.at(index / 64u) |= uint64_t(1u) << (index % 64u);
+        } break;
+
+        case dxbc_spv::dxbc::OpCode::eDclUavTyped:
+        case dxbc_spv::dxbc::OpCode::eDclUavRaw:
+        case dxbc_spv::dxbc::OpCode::eDclUavStructured: {
+          uint32_t index = op.getDst(0u).getIndex(0u);
+          bindingMask.uavMask |= uint64_t(1u) << index;
+        } break;
+
+        case dxbc_spv::dxbc::OpCode::eDclInput:
+        case dxbc_spv::dxbc::OpCode::eDclInputSgv:
+        case dxbc_spv::dxbc::OpCode::eDclInputSiv:
+        case dxbc_spv::dxbc::OpCode::eDclInputPs:
+        case dxbc_spv::dxbc::OpCode::eDclInputPsSgv:
+        case dxbc_spv::dxbc::OpCode::eDclInputPsSiv: {
+          const auto& dst = op.getDst(0u);
+
+          if (dst.getRegisterType() == dxbc_spv::dxbc::RegisterType::eInnerCoverage) {
+            if (m_deviceFeatures.GetConservativeRasterizationTier() < D3D11_CONSERVATIVE_RASTERIZATION_TIER_2) {
+              Logger::warn(str::format("D3D11: ", ShaderKey.toString(), ": Shader uses innser coverage, but feature is not supported."));
+              return E_INVALIDARG;
+            }
+          }
+        } break;
+
+        case dxbc_spv::dxbc::OpCode::eDclOutputSgv:
+        case dxbc_spv::dxbc::OpCode::eDclOutputSiv: {
+          auto sysval = op.getImm(0u).getImmediate<dxbc_spv::dxbc::Sysval>(0u);
+
+          if ((sysval == dxbc_spv::dxbc::Sysval::eRenderTargetId || sysval == dxbc_spv::dxbc::Sysval::eViewportId)
+           && (shaderInfo.getType() == dxbc_spv::dxbc::ShaderType::eVertex || shaderInfo.getType() == dxbc_spv::dxbc::ShaderType::eDomain)) {
+            D3D11_FEATURE_DATA_D3D11_OPTIONS3 options3 = { };
+            m_deviceFeatures.GetFeatureData(D3D11_FEATURE_D3D11_OPTIONS3, sizeof(options3), &options3);
+
+            if (!options3.VPAndRTArrayIndexFromAnyShaderFeedingRasterizer) {
+              Logger::warn(str::format("D3D11: ", ShaderKey.toString(), ": Shader uses viewport / layer, but feature is not supported."));
+              return E_INVALIDARG;
+            }
+          }
+        } [[fallthrough]];
+
+        case dxbc_spv::dxbc::OpCode::eDclOutput: {
+          const auto& dst = op.getDst(0u);
+
+          if (dst.getRegisterType() == dxbc_spv::dxbc::RegisterType::eStencilRef) {
+            if (m_deviceFeatures.GetConservativeRasterizationTier() < D3D11_CONSERVATIVE_RASTERIZATION_TIER_2) {
+              Logger::warn(str::format("D3D11: ", ShaderKey.toString(), ": Shader exports stencil reference, but feature is not supported."));
+              return E_INVALIDARG;
+            }
+          }
+        } break;
+
+        case dxbc_spv::dxbc::OpCode::eDMov:
+        case dxbc_spv::dxbc::OpCode::eDMovc:
+        case dxbc_spv::dxbc::OpCode::eDAdd:
+        case dxbc_spv::dxbc::OpCode::eDMul:
+        case dxbc_spv::dxbc::OpCode::eDFma:
+        case dxbc_spv::dxbc::OpCode::eDDiv:
+        case dxbc_spv::dxbc::OpCode::eDRcp:
+        case dxbc_spv::dxbc::OpCode::eDMin:
+        case dxbc_spv::dxbc::OpCode::eDMax:
+        case dxbc_spv::dxbc::OpCode::eDtoF:
+        case dxbc_spv::dxbc::OpCode::eDtoI:
+        case dxbc_spv::dxbc::OpCode::eDtoU:
+        case dxbc_spv::dxbc::OpCode::eFtoD:
+        case dxbc_spv::dxbc::OpCode::eItoD:
+        case dxbc_spv::dxbc::OpCode::eUtoD:
+        case dxbc_spv::dxbc::OpCode::eDEq:
+        case dxbc_spv::dxbc::OpCode::eDNe:
+        case dxbc_spv::dxbc::OpCode::eDLt:
+        case dxbc_spv::dxbc::OpCode::eDGe: {
+          D3D11_FEATURE_DATA_DOUBLES doubles = { };
+          m_deviceFeatures.GetFeatureData(D3D11_FEATURE_DOUBLES, sizeof(doubles), &doubles);
+
+          if (!doubles.DoublePrecisionFloatShaderOps) {
+            Logger::warn(str::format("D3D11: ", ShaderKey.toString(), ": Shader uses fp64, but feature is not supported."));
+            return E_INVALIDARG;
+          }
+        } break;
+
+        case dxbc_spv::dxbc::OpCode::eGather4S:
+        case dxbc_spv::dxbc::OpCode::eGather4CS:
+        case dxbc_spv::dxbc::OpCode::eGather4PoS:
+        case dxbc_spv::dxbc::OpCode::eGather4PoCS:
+        case dxbc_spv::dxbc::OpCode::eLdS:
+        case dxbc_spv::dxbc::OpCode::eLdMsS:
+        case dxbc_spv::dxbc::OpCode::eLdUavTypedS:
+        case dxbc_spv::dxbc::OpCode::eLdRawS:
+        case dxbc_spv::dxbc::OpCode::eLdStructuredS:
+        case dxbc_spv::dxbc::OpCode::eSampleLS:
+        case dxbc_spv::dxbc::OpCode::eSampleClzS:
+        case dxbc_spv::dxbc::OpCode::eSampleClampS:
+        case dxbc_spv::dxbc::OpCode::eSampleBClampS:
+        case dxbc_spv::dxbc::OpCode::eSampleDClampS:
+        case dxbc_spv::dxbc::OpCode::eSampleCClampS:
+        case dxbc_spv::dxbc::OpCode::eCheckAccessFullyMapped: {
+          if (m_deviceFeatures.GetTiledResourcesTier() < D3D11_TILED_RESOURCES_TIER_2) {
+            Logger::warn(str::format("D3D11: ", ShaderKey.toString(), ": Shader uses sparse residency, but TILED_RESOURCES_TIER_2 is not supported."));
+            return E_INVALIDARG;
+          }
+        } break;
+
+        default:
+          break;
+      }
+    }
+
+    // Handle immediate constant buffer declaration
+    D3D11ShaderIcbInfo icbInfo = { };
+
+    if (icbOp) {
+      icbInfo.data = icbOp.getCustomData().first;
+      icbInfo.size = icbOp.getCustomData().second;
+    }
+
+    // Initialize the actual shader
+    D3D11CommonShader commonShader = { };
 
     HRESULT hr = m_shaderModules.GetShaderModule(this,
       ShaderKey, ModuleInfo, pShaderBytecode, BytecodeLength,
-      &commonShader);
+      icbInfo, bindingMask, &commonShader);
 
     if (FAILED(hr))
       return hr;
-
-    auto shader = commonShader.GetShader();
-
-    if (shader->metadata().flags.test(DxvkShaderFlag::ExportsStencilRef)
-     && !m_dxvkDevice->features().extShaderStencilExport)
-      return E_INVALIDARG;
-
-    if (shader->metadata().flags.test(DxvkShaderFlag::ExportsViewportIndexLayerFromVertexStage)
-     && (!m_dxvkDevice->features().vk12.shaderOutputViewportIndex
-      || !m_dxvkDevice->features().vk12.shaderOutputLayer))
-      return E_INVALIDARG;
-
-    if (shader->metadata().flags.test(DxvkShaderFlag::UsesSparseResidency)
-     && !m_dxvkDevice->features().core.features.shaderResourceResidency)
-      return E_INVALIDARG;
-
-    if (shader->metadata().flags.test(DxvkShaderFlag::UsesFragmentCoverage)
-     && !m_dxvkDevice->properties().extConservativeRasterization.fullyCoveredFragmentShaderInputVariable)
-      return E_INVALIDARG;
 
     *pShaderModule = std::move(commonShader);
     return S_OK;
@@ -2151,7 +2315,7 @@ namespace dxvk {
       flags1 |= D3D11_FORMAT_SUPPORT_TYPED_UNORDERED_ACCESS_VIEW;
       flags2 |= D3D11_FORMAT_SUPPORT2_UAV_TYPED_STORE;
       
-      if (!m_shaderOptions.compileOptions.flags.test(DxvkShaderCompileFlag::TypedR32LoadRequiresFormat)) {
+      if (!m_shaderOptions.flags.test(DxvkShaderCompileFlag::TypedR32LoadRequiresFormat)) {
         // If the R32 formats are supported without format declarations,
         // we can optionally support additional formats for typed loads
         if (imgFeatures & VK_FORMAT_FEATURE_2_STORAGE_READ_WITHOUT_FORMAT_BIT)
@@ -2420,13 +2584,13 @@ namespace dxvk {
     auto result = Device->getShaderCompileOptions();
 
     if (Options.disableMsaa)
-      result.compileOptions.flags.set(DxvkShaderCompileFlag::DisableMsaa);
+      result.flags.set(DxvkShaderCompileFlag::DisableMsaa);
 
     if (Options.forceVolatileTgsmAccess)
-      result.compileOptions.flags.set(DxvkShaderCompileFlag::InsertSharedMemoryBarriers);
+      result.flags.set(DxvkShaderCompileFlag::InsertSharedMemoryBarriers);
 
     if (Options.forceComputeUavBarriers)
-      result.compileOptions.flags.set(DxvkShaderCompileFlag::InsertResourceBarriers);
+      result.flags.set(DxvkShaderCompileFlag::InsertResourceBarriers);
 
     return result;
   }

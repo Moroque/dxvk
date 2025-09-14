@@ -36,7 +36,9 @@ namespace dxvk {
         info.samplerHeap.getBinding()));
     }
 
-    if (m_debugName.empty())
+    if (!info.debugName.empty())
+      m_debugName = info.debugName;
+    else if (m_debugName.empty())
       m_debugName = std::to_string(getCookie());
 
     m_code = SpirvCompressedBuffer(code);
@@ -46,6 +48,16 @@ namespace dxvk {
 
   DxvkSpirvShader::~DxvkSpirvShader() {
 
+  }
+
+
+  DxvkShaderMetadata DxvkSpirvShader::getShaderMetadata() {
+    return m_metadata;
+  }
+
+
+  void DxvkSpirvShader::compile() {
+    // No-op sice SPIR-V is already compiled
   }
 
 
@@ -90,12 +102,17 @@ namespace dxvk {
   }
 
 
+  DxvkPipelineLayoutBuilder DxvkSpirvShader::getLayout() {
+    return m_layout;
+  }
+
+
   void DxvkSpirvShader::dump(std::ostream& outputStream) {
     m_code.decompress().store(outputStream);
   }
 
 
-  std::string DxvkSpirvShader::debugName() const {
+  std::string DxvkSpirvShader::debugName() {
     return m_debugName;
   }
 
@@ -277,9 +294,11 @@ namespace dxvk {
               }
 
               if (varType.opCode() == spv::OpTypeStruct) {
+                auto structId = varType.arg(1u);
+
                 for (uint32_t i = 2u; i < varType.length(); i++) {
-                  SpirvInstruction memberType(code.data(), m_idToOffset.at(varType.arg(2u)), code.dwords());
-                  handleIoVariable(code, memberType, storage, varId, int32_t(i - 2u));
+                  SpirvInstruction memberType(code.data(), m_idToOffset.at(varType.arg(i)), code.dwords());
+                  handleIoVariable(code, memberType, storage, structId, int32_t(i - 2u));
                 }
               } else {
                 handleIoVariable(code, varType, storage, varId, -1);

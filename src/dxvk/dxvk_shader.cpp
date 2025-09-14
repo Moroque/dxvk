@@ -64,44 +64,15 @@ namespace dxvk {
   DxvkShader::~DxvkShader() {
     
   }
-  
-  
-  bool DxvkShader::canUsePipelineLibrary(bool standalone) const {
-    if (standalone) {
-      // Standalone pipeline libraries are unsupported for geometry
-      // and tessellation stages since we'd need to compile them
-      // all into one library
-      if (m_metadata.stage != VK_SHADER_STAGE_VERTEX_BIT
-       && m_metadata.stage != VK_SHADER_STAGE_FRAGMENT_BIT
-       && m_metadata.stage != VK_SHADER_STAGE_COMPUTE_BIT)
-        return false;
 
-      // Standalone vertex shaders must export vertex position
-      if (m_metadata.stage == VK_SHADER_STAGE_VERTEX_BIT
-       && !m_metadata.flags.test(DxvkShaderFlag::ExportsPosition))
-        return false;
-    } else {
-      // Tessellation control shaders must define a valid vertex count
-      if (m_metadata.stage == VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT
-       && (m_metadata.patchVertexCount < 1 || m_metadata.patchVertexCount > 32))
-        return false;
 
-      // We don't support GPL with transform feedback right now
-      if (m_metadata.flags.test(DxvkShaderFlag::HasTransformFeedback))
-        return false;
-    }
-
-    // Spec constant selectors are only supported in graphics
-    if (m_metadata.specConstantMask & (1u << MaxNumSpecConstants))
-      return m_metadata.stage != VK_SHADER_STAGE_COMPUTE_BIT;
-
-    // Always late-compile shaders with spec constants
-    // that don't use the spec constant selector
-    return !m_metadata.specConstantMask;
+  const std::string& DxvkShader::getShaderDumpPath() {
+    static std::string s_path = env::getEnvVar("DXVK_SHADER_DUMP_PATH");
+    return s_path;
   }
 
 
-
+  
 
   DxvkShaderStageInfo::DxvkShaderStageInfo(const DxvkDevice* device)
   : m_device(device) {
@@ -171,79 +142,17 @@ namespace dxvk {
   }
 
 
-  DxvkShaderSet DxvkShaderPipelineLibraryKey::getShaderSet() const {
-    DxvkShaderSet result;
-
-    for (uint32_t i = 0; i < m_shaderCount; i++) {
-      auto shader = m_shaders[i].ptr();
-
-      switch (shader->metadata().stage) {
-        case VK_SHADER_STAGE_VERTEX_BIT:                  result.vs = shader; break;
-        case VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT:    result.tcs = shader; break;
-        case VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT: result.tes = shader; break;
-        case VK_SHADER_STAGE_GEOMETRY_BIT:                result.gs = shader; break;
-        case VK_SHADER_STAGE_FRAGMENT_BIT:                result.fs = shader; break;
-        case VK_SHADER_STAGE_COMPUTE_BIT:                 result.cs = shader; break;
-        default: ;
-      }
-    }
-
-    return result;
-  }
-
-
-  DxvkPipelineLayoutBuilder DxvkShaderPipelineLibraryKey::getLayout() const {
-    // If no shader is defined, this is a null fragment shader library
-    VkShaderStageFlags stages = m_shaderStages;
-
-    if (!stages)
-      stages = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-    DxvkPipelineLayoutBuilder result(stages);
-
-    for (uint32_t i = 0u; i < m_shaderCount; i++)
-      result.addLayout(m_shaders[i]->getLayout());
-
-    return result;
-  }
-
-
   void DxvkShaderPipelineLibraryKey::addShader(
-    const Rc<DxvkShader>&               shader) {
-    m_shaderStages |= shader->metadata().stage;
-    m_shaders[m_shaderCount++] = shader;
-  }
-
-
-  bool DxvkShaderPipelineLibraryKey::canUsePipelineLibrary() const {
-    // Ensure that each individual shader can be used in a library
-    bool standalone = m_shaderCount <= 1;
-
-    for (uint32_t i = 0; i < m_shaderCount; i++) {
-      if (!m_shaders[i]->canUsePipelineLibrary(standalone))
-        return false;
-    }
-
-    // Ensure that stage I/O is compatible between stages
-    for (uint32_t i = 0; i + 1 < m_shaderCount; i++) {
-      const auto& currShaderMeta = m_shaders[i]->metadata();
-      const auto& nextShaderMeta = m_shaders[i + 1u]->metadata();
-
-      if (!DxvkShaderIo::checkStageCompatibility(
-          nextShaderMeta.stage, nextShaderMeta.inputs,
-          currShaderMeta.stage, currShaderMeta.outputs))
-        return false;
-    }
-
-    return true;
+          Rc<DxvkShader>                shader) {
+    m_shaders.push_back(std::move(shader));
   }
 
 
   bool DxvkShaderPipelineLibraryKey::eq(
     const DxvkShaderPipelineLibraryKey& other) const {
-    bool eq = m_shaderStages == other.m_shaderStages;
+    bool eq = true;
 
-    for (uint32_t i = 0; i < m_shaderCount && eq; i++)
+    for (uint32_t i = 0; i < m_shaders.size() && eq; i++)
       eq = m_shaders[i] == other.m_shaders[i];
 
     return eq;
@@ -252,9 +161,8 @@ namespace dxvk {
 
   size_t DxvkShaderPipelineLibraryKey::hash() const {
     DxvkHashState hash;
-    hash.add(uint32_t(m_shaderStages));
 
-    for (uint32_t i = 0; i < m_shaderCount; i++)
+    for (uint32_t i = 0; i < m_shaders.size(); i++)
       hash.add(m_shaders[i]->getCookie());
 
     return hash;
@@ -266,9 +174,8 @@ namespace dxvk {
           DxvkPipelineManager*      manager,
     const DxvkShaderPipelineLibraryKey& key)
   : m_device      (device),
-    m_stats       (&manager->m_stats),
-    m_shaders     (key.getShaderSet()),
-    m_layout      (device, manager, key.getLayout()) {
+    m_manager     (manager),
+    m_shaders     (key) {
 
   }
 
@@ -300,11 +207,11 @@ namespace dxvk {
     if (m_device->mustTrackPipelineLifetime())
       m_useCount += 1;
 
-    if (m_pipeline.handle)
-      return m_pipeline;
+    if (m_pipeline)
+      return *m_pipeline;
 
     m_pipeline = compileShaderPipelineLocked();
-    return m_pipeline;
+    return *m_pipeline;
   }
 
 
@@ -328,31 +235,49 @@ namespace dxvk {
     // Compile the pipeline with default args
     DxvkShaderPipelineLibraryHandle pipeline = compileShaderPipelineLocked();
 
-    // On 32-bit, destroy the pipeline immediately in order to
-    // save memory. We should hit the driver's disk cache once
-    // we need to recreate the pipeline.
+    if (!pipeline.handle)
+      return;
+
     if (m_device->mustTrackPipelineLifetime()) {
+      // On 32-bit, destroy the pipeline immediately in order to
+      // save memory. We should hit the driver's disk cache once
+      // we need to recreate the pipeline.
       auto vk = m_device->vkd();
       vk->vkDestroyPipeline(vk->device(), pipeline.handle, nullptr);
-
-      pipeline.handle = VK_NULL_HANDLE;
+    } else {
+      // Write back pipeline handle for future use
+      m_pipeline = pipeline;
     }
-
-    // Write back pipeline handle for future use
-    m_pipeline = pipeline;
   }
 
 
   void DxvkShaderPipelineLibrary::destroyShaderPipelineLocked() {
     auto vk = m_device->vkd();
 
-    vk->vkDestroyPipeline(vk->device(), m_pipeline.handle, nullptr);
+    if (m_pipeline && m_pipeline->handle)
+      vk->vkDestroyPipeline(vk->device(), m_pipeline->handle, nullptr);
 
-    m_pipeline.handle = VK_NULL_HANDLE;
+    m_pipeline.reset();
   }
 
 
   DxvkShaderPipelineLibraryHandle DxvkShaderPipelineLibrary::compileShaderPipelineLocked() {
+    compileShaders();
+
+    // Increment stat counter the first time this
+    // shader pipeline gets compiled successfully
+    bool compiledBefore = std::exchange(m_compiledOnce, true);
+
+    if (!compiledBefore) {
+      if (m_shaders.findShader(VK_SHADER_STAGE_COMPUTE_BIT))
+        m_manager->m_stats.numComputePipelines += 1;
+      else
+        m_manager->m_stats.numGraphicsLibraries += 1;
+    }
+
+    if (!canCreatePipelineLibrary())
+      return { VK_NULL_HANDLE, 0 };
+
     this->notifyLibraryCompile();
 
     // If this is not the first time we're compiling the pipeline,
@@ -360,7 +285,7 @@ namespace dxvk {
     // so that we don't have to decompress our SPIR-V shader again.
     DxvkShaderPipelineLibraryHandle pipeline = { VK_NULL_HANDLE, 0 };
 
-    if (m_compiledOnce && canUsePipelineCacheControl())
+    if (compiledBefore && canUsePipelineCacheControl())
       pipeline = this->compileShaderPipeline(VK_PIPELINE_CREATE_2_FAIL_ON_PIPELINE_COMPILE_REQUIRED_BIT);
 
     if (!pipeline.handle)
@@ -369,17 +294,6 @@ namespace dxvk {
     // Well that didn't work
     if (!pipeline.handle)
       return { VK_NULL_HANDLE, 0 };
-
-    // Increment stat counter the first time this
-    // shader pipeline gets compiled successfully
-    if (!m_compiledOnce) {
-      if (m_shaders.cs)
-        m_stats->numComputePipelines += 1;
-      else
-        m_stats->numGraphicsLibraries += 1;
-
-      m_compiledOnce = true;
-    }
 
     return pipeline;
   }
@@ -459,8 +373,10 @@ namespace dxvk {
     // If a tessellation control shader is present, grab the patch vertex count
     VkPipelineTessellationStateCreateInfo tsInfo = { VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO };
 
-    if (m_shaders.tcs)
-      tsInfo.patchControlPoints = m_shaders.tcs->metadata().patchVertexCount;
+    auto tcs = m_shaders.findShader(VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT);
+
+    if (tcs)
+      tsInfo.patchControlPoints = tcs->metadata().patchVertexCount;
 
     // All viewport state is dynamic, so we do not need to initialize this.
     VkPipelineViewportStateCreateInfo vpInfo = { VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO };
@@ -500,11 +416,11 @@ namespace dxvk {
     VkGraphicsPipelineCreateInfo info = { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO, &libInfo };
     info.stageCount           = stageInfo.getStageCount();
     info.pStages              = stageInfo.getStageInfos();
-    info.pTessellationState   = m_shaders.tcs ? &tsInfo : nullptr;
+    info.pTessellationState   = m_shaders.findShader(VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT) ? &tsInfo : nullptr;
     info.pViewportState       = &vpInfo;
     info.pRasterizationState  = &rsInfo;
     info.pDynamicState        = &dyInfo;
-    info.layout               = m_layout.getLayout(DxvkPipelineLayoutType::Independent)->getPipelineLayout();
+    info.layout               = m_layout->getLayout(DxvkPipelineLayoutType::Independent)->getPipelineLayout();
     info.basePipelineIndex    = -1;
 
     VkPipeline pipeline = VK_NULL_HANDLE;
@@ -541,7 +457,9 @@ namespace dxvk {
       dynamicStates[dynamicStateCount++] = VK_DYNAMIC_STATE_DEPTH_BOUNDS;
     }
 
-    bool hasSampleRateShading = m_shaders.fs && m_shaders.fs->metadata().flags.test(DxvkShaderFlag::HasSampleRateShading);
+    auto fs = m_shaders.findShader(VK_SHADER_STAGE_FRAGMENT_BIT);
+
+    bool hasSampleRateShading = fs && fs->metadata().flags.test(DxvkShaderFlag::HasSampleRateShading);
     bool hasDynamicMultisampleState = hasSampleRateShading
       && m_device->features().extExtendedDynamicState3.extendedDynamicState3RasterizationSamples
       && m_device->features().extExtendedDynamicState3.extendedDynamicState3SampleMask;
@@ -550,7 +468,7 @@ namespace dxvk {
       dynamicStates[dynamicStateCount++] = VK_DYNAMIC_STATE_RASTERIZATION_SAMPLES_EXT;
       dynamicStates[dynamicStateCount++] = VK_DYNAMIC_STATE_SAMPLE_MASK_EXT;
 
-      if (!m_shaders.fs || !m_shaders.fs->metadata().flags.test(DxvkShaderFlag::ExportsSampleMask)) {
+      if (!fs || !fs->metadata().flags.test(DxvkShaderFlag::ExportsSampleMask)) {
         if (m_device->features().extExtendedDynamicState3.extendedDynamicState3AlphaToCoverageEnable)
           dynamicStates[dynamicStateCount++] = VK_DYNAMIC_STATE_ALPHA_TO_COVERAGE_ENABLE_EXT;
       }
@@ -595,7 +513,7 @@ namespace dxvk {
     info.pStages              = stageInfo.getStageInfos();
     info.pDepthStencilState   = &dsInfo;
     info.pDynamicState        = &dyInfo;
-    info.layout               = m_layout.getLayout(DxvkPipelineLayoutType::Independent)->getPipelineLayout();
+    info.layout               = m_layout->getLayout(DxvkPipelineLayoutType::Independent)->getPipelineLayout();
     info.basePipelineIndex    = -1;
 
     if (hasSampleRateShading)
@@ -625,7 +543,7 @@ namespace dxvk {
 
     VkComputePipelineCreateInfo info = { VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO, &flagsInfo };
     info.stage        = *stageInfo.getStageInfos();
-    info.layout       = m_layout.getLayout(DxvkPipelineLayoutType::Merged)->getPipelineLayout();
+    info.layout       = m_layout->getLayout(DxvkPipelineLayoutType::Merged)->getPipelineLayout();
     info.basePipelineIndex = -1;
 
     VkPipeline pipeline = VK_NULL_HANDLE;
@@ -652,7 +570,7 @@ namespace dxvk {
       ? DxvkPipelineLayoutType::Merged
       : DxvkPipelineLayoutType::Independent;
 
-    return shader->getCode(m_layout.getBindingMap(layoutType), nullptr);
+    return shader->getCode(m_layout->getBindingMap(layoutType), nullptr);
   }
 
 
@@ -674,53 +592,22 @@ namespace dxvk {
 
 
   VkShaderStageFlags DxvkShaderPipelineLibrary::getShaderStages() const {
-    if (m_shaders.vs) {
-      VkShaderStageFlags result = VK_SHADER_STAGE_VERTEX_BIT;
+    VkShaderStageFlags result = 0u;
 
-      if (m_shaders.tcs)
-        result |= VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
-
-      if (m_shaders.tes)
-        result |= VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
-
-      if (m_shaders.gs)
-        result |= VK_SHADER_STAGE_GEOMETRY_BIT;
-
-      return result;
-    }
-
-    if (m_shaders.cs)
-      return VK_SHADER_STAGE_COMPUTE_BIT;
+    for (uint32_t i = 0u; i < m_shaders.getShaderCount(); i++)
+      result |= m_shaders.getShader(i)->metadata().stage;
 
     // Must be a fragment shader even if fs is null
-    return VK_SHADER_STAGE_FRAGMENT_BIT;
+    if (!result)
+      result = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    return result;
   }
 
 
   DxvkShader* DxvkShaderPipelineLibrary::getShader(
           VkShaderStageFlagBits         stage) const {
-    switch (stage) {
-      case VK_SHADER_STAGE_VERTEX_BIT:
-        return m_shaders.vs;
-
-      case VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT:
-        return m_shaders.tcs;
-
-      case VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT:
-        return m_shaders.tes;
-
-      case VK_SHADER_STAGE_GEOMETRY_BIT:
-        return m_shaders.gs;
-
-      case VK_SHADER_STAGE_FRAGMENT_BIT:
-        return m_shaders.fs;
-
-      case VK_SHADER_STAGE_COMPUTE_BIT:
-        return m_shaders.cs;
-
-      default:
-        return nullptr;
-    }
+    return m_shaders.findShader(stage);
   }
 
 
@@ -751,19 +638,110 @@ namespace dxvk {
   }
 
 
-  void DxvkShaderPipelineLibrary::notifyLibraryCompile() const {
-    if (m_shaders.vs) {
-      // Only notify the shader itself if we're actually
-      // building the shader's standalone pipeline library
-      if (!m_shaders.tcs && !m_shaders.tes && !m_shaders.gs)
-        m_shaders.vs->notifyCompile();
+  void DxvkShaderPipelineLibrary::compileShaders() {
+    if (m_layout)
+      return;
+
+    VkShaderStageFlags stages = 0u;
+
+    for (uint32_t i = 0u; i < m_shaders.getShaderCount(); i++) {
+      auto shader = m_shaders.getShader(i);
+      shader->compile();
+      stages |= shader->metadata().stage;
     }
 
-    if (m_shaders.fs)
-      m_shaders.fs->notifyCompile();
+    if (!stages)
+      stages = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-    if (m_shaders.cs)
-      m_shaders.cs->notifyCompile();
+    DxvkPipelineLayoutBuilder layoutBuilder(stages);
+
+    for (uint32_t i = 0u; i < m_shaders.getShaderCount(); i++) {
+      auto shader = m_shaders.getShader(i);
+      layoutBuilder.addLayout(shader->getLayout());
+    }
+
+    m_layout.emplace(m_device, m_manager, layoutBuilder);
+  }
+
+
+  bool DxvkShaderPipelineLibrary::canCreatePipelineLibrary() const {
+    // Check whether device supports GPL at all
+    if (!m_device->canUseGraphicsPipelineLibrary())
+      return false;
+
+    // Can only create pre-raster pipelines if all shaders are present
+    if ((m_shaders.findShader(VK_SHADER_STAGE_GEOMETRY_BIT)
+      || m_shaders.findShader(VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT)
+      || m_shaders.findShader(VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT))
+     && !m_shaders.findShader(VK_SHADER_STAGE_VERTEX_BIT))
+      return false;
+
+    // The final geometry stage must export position
+    DxvkShader* lastPreRasterStage = m_shaders.findShader(VK_SHADER_STAGE_GEOMETRY_BIT);
+
+    if (!lastPreRasterStage)
+      lastPreRasterStage = m_shaders.findShader(VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT);
+
+    if (!lastPreRasterStage)
+      lastPreRasterStage = m_shaders.findShader(VK_SHADER_STAGE_VERTEX_BIT);
+
+    for (uint32_t i = 0u; i < m_shaders.getShaderCount(); i++) {
+      auto currShader = m_shaders.getShader(i);
+
+      if (!canCreatePipelineLibraryForShader(*currShader, currShader == lastPreRasterStage))
+        return false;
+
+      if (i) {
+        // Ensure that stage I/O is compatible between stages
+        auto prevShader = m_shaders.getShader(i - 1u);
+
+        const auto& prevShaderMeta = prevShader->metadata();
+        const auto& currShaderMeta = currShader->metadata();
+
+        if (!DxvkShaderIo::checkStageCompatibility(
+            currShaderMeta.stage, currShaderMeta.inputs,
+            prevShaderMeta.stage, prevShaderMeta.outputs))
+          return false;
+      }
+    }
+
+    return true;
+  }
+
+
+  bool DxvkShaderPipelineLibrary::canCreatePipelineLibraryForShader(DxvkShader& shader, bool needsPosition) const {
+    const auto& metadata = shader.metadata();
+
+    // Tessellation control shaders must define a valid vertex count
+    if (metadata.stage == VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT
+      && (metadata.patchVertexCount < 1 || metadata.patchVertexCount > 32))
+      return false;
+
+    // We don't support GPL with transform feedback right now
+    if (metadata.flags.test(DxvkShaderFlag::HasTransformFeedback))
+      return false;
+
+    // Pre-raster pipelines must export vertex position to be useful. This
+    // stops us from compiling vertex shader libraries that are only used
+    // as input for tessellation or geometry shaers.
+    if (needsPosition && !metadata.flags.test(DxvkShaderFlag::ExportsPosition))
+      return false;
+
+    // Spec constant selectors are only supported in graphics
+    if (metadata.specConstantMask & (1u << MaxNumSpecConstants))
+      return metadata.stage != VK_SHADER_STAGE_COMPUTE_BIT;
+
+    // Always late-compile shaders with spec constants
+    // that don't use the spec constant selector
+    return !metadata.specConstantMask;
+  }
+
+
+  void DxvkShaderPipelineLibrary::notifyLibraryCompile() const {
+    // Only notify the shader itself if we're actually
+    // building the shader's standalone pipeline library
+    if (m_shaders.getShaderCount() == 1u)
+      m_shaders.getShader(0u)->notifyCompile();
   }
 
 

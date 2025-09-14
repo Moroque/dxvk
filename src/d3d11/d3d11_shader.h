@@ -29,7 +29,7 @@ namespace dxvk {
    * Helper class to compute backend resource
    * indices for D3D11 binding slots.
    */
-  class D3D11ShaderResourceMapping : public DxvkIrResourceMapping {
+  struct D3D11ShaderResourceMapping {
     static constexpr uint32_t StageCount        = 6u;
     static constexpr uint32_t CbvPerStage       = 16u;
     static constexpr uint32_t SamplersPerStage  = 16u;
@@ -39,15 +39,6 @@ namespace dxvk {
     static constexpr uint32_t UavTotal          = UavPerPipeline * 4u;
     static constexpr uint32_t UavIndexGraphics  = DxbcSrvTotal;
     static constexpr uint32_t UavIndexCompute   = UavIndexGraphics + DxbcUavPerPipeline * 2u;
-  public:
-
-    ~D3D11ShaderResourceMapping();
-
-    uint32_t determineResourceIndex(
-            dxbc_spv::ir::ShaderStage stage,
-            dxbc_spv::ir::ScalarType  type,
-            uint32_t                  regSpace,
-            uint32_t                  regIndex) const;
 
     static uint32_t computeCbvBinding(dxbc_spv::ir::ShaderStage stage, uint32_t index) {
       return computeStageIndex(stage) * CbvPerStage + index;
@@ -69,8 +60,6 @@ namespace dxvk {
       return computeUavBinding(stage, index) + UavPerPipeline;
     }
 
-  private:
-
     static uint32_t computeStageIndex(dxbc_spv::ir::ShaderStage stage) {
       switch (stage) {
         case dxbc_spv::ir::ShaderStage::ePixel:     return 0u;
@@ -83,6 +72,17 @@ namespace dxvk {
       }
     }
 
+  };
+
+
+  /**
+   * \brief Immediate constant buffer info
+   */
+  struct D3D11ShaderIcbInfo {
+    /// Size in dwords
+    size_t size = 0u;
+    /// Constant data
+    const uint32_t* data = nullptr;
   };
 
 
@@ -103,7 +103,9 @@ namespace dxvk {
       const DxvkShaderHash&         ShaderKey,
       const DxvkIrShaderCreateInfo& ModuleInfo,
       const void*                   pShaderBytecode,
-            size_t                  BytecodeLength);
+            size_t                  BytecodeLength,
+      const D3D11ShaderIcbInfo&     Icb,
+      const DxbcBindingMask&        BindingMask);
     ~D3D11CommonShader();
 
     Rc<DxvkShader> GetShader() const {
@@ -136,7 +138,8 @@ namespace dxvk {
       const DxvkShaderHash&         ShaderKey,
       const DxvkIrShaderCreateInfo& ModuleInfo,
       const void*                   pShaderBytecode,
-            size_t                  BytecodeLength);
+            size_t                  BytecodeLength,
+      const D3D11ShaderIcbInfo&     Icb);
 
     void CreateLegacyShader(
             D3D11Device*            pDevice,
@@ -144,9 +147,6 @@ namespace dxvk {
       const DxvkIrShaderCreateInfo& ModuleInfo,
       const void*                   pShaderBytecode,
             size_t                  BytecodeLength);
-
-    static VkShaderStageFlagBits ConvertShaderStage(
-            dxbc_spv::dxbc::ShaderType Type);
 
   };
 
@@ -246,6 +246,8 @@ namespace dxvk {
       const DxvkIrShaderCreateInfo& ModuleInfo,
       const void*                   pShaderBytecode,
             size_t                  BytecodeLength,
+      const D3D11ShaderIcbInfo&     Icb,
+      const DxbcBindingMask&        BindingMask,
             D3D11CommonShader*      pShader);
     
   private:
