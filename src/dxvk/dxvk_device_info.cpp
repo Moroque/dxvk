@@ -53,7 +53,6 @@ namespace dxvk {
     HANDLE_EXT(khrSwapchain);                      \
     HANDLE_EXT(khrSwapchainMutableFormat);         \
     HANDLE_EXT(khrWin32KeyedMutex);                \
-    HANDLE_EXT(nvDescriptorPoolOverallocation);    \
     HANDLE_EXT(nvLowLatency2);                     \
     HANDLE_EXT(nvRawAccessChains);                 \
     HANDLE_EXT(nvxBinaryImport);                   \
@@ -465,10 +464,6 @@ namespace dxvk {
     if (m_featuresSupported.extRobustness2.robustImageAccess2)
       m_featuresSupported.vk13.robustImageAccess = VK_FALSE;
 
-    // If descriptor buffers are used, disable legacy descriptor model extensions
-    if (m_featuresSupported.extDescriptorBuffer.descriptorBuffer)
-      m_featuresSupported.nvDescriptorPoolOverallocation.descriptorPoolOverallocation = VK_FALSE;
-
     // Vertex attribute divisor is unusable before spec version 3
     if (m_extensionsSupported.extVertexAttributeDivisor.specVersion < 3u) {
       m_featuresSupported.extVertexAttributeDivisor.vertexAttributeInstanceRateDivisor = VK_FALSE;
@@ -485,9 +480,6 @@ namespace dxvk {
     // Sanitize features with other feature dependencies
     if (!m_featuresSupported.core.features.shaderInt16)
       m_featuresSupported.vk11.storagePushConstant16 = VK_FALSE;
-
-    if (!m_featuresSupported.extDepthClipEnable.depthClipEnable)
-      m_featuresSupported.extExtendedDynamicState3.extendedDynamicState3DepthClipEnable = VK_FALSE;
   }
 
 
@@ -768,7 +760,7 @@ namespace dxvk {
       ENABLE_EXT_FEATURE(extCustomBorderColor, customBorderColorWithoutFormat, false),
 
       /* Depth clip matches D3D semantics where depth clamp does not */
-      ENABLE_EXT_FEATURE(extDepthClipEnable, depthClipEnable, false),
+      ENABLE_EXT_FEATURE(extDepthClipEnable, depthClipEnable, true),
 
       /* Controls depth bias behaviour with emulated depth formats */
       ENABLE_EXT_FEATURE(extDepthBiasControl, depthBiasControl, false),
@@ -851,7 +843,7 @@ namespace dxvk {
 
       /* Maintenance features, relied on in various parts of the code */
       ENABLE_EXT_FEATURE(khrMaintenance5, maintenance5, true),
-      ENABLE_EXT_FEATURE(khrMaintenance6, maintenance6, false),
+      ENABLE_EXT_FEATURE(khrMaintenance6, maintenance6, true),
       ENABLE_EXT_FEATURE(khrMaintenance7, maintenance7, false),
 
       /* Dependency for graphics pipeline library */
@@ -872,9 +864,6 @@ namespace dxvk {
 
       /* Keyed mutex support in wine */
       ENABLE_EXT(khrWin32KeyedMutex, false),
-
-      /* Descriptor pool overallocation, reduces descriptor pool spam in legacy model */
-      ENABLE_EXT_FEATURE(nvDescriptorPoolOverallocation, descriptorPoolOverallocation, false),
 
       /* Reflex support */
       ENABLE_EXT(nvLowLatency2, false),

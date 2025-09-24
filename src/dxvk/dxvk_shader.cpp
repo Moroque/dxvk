@@ -391,14 +391,10 @@ namespace dxvk {
     rsInfo.polygonMode        = VK_POLYGON_MODE_FILL;
     rsInfo.lineWidth          = 1.0f;
 
-    if (m_device->features().extDepthClipEnable.depthClipEnable) {
-      // Only use the fixed depth clip state if we can't make it dynamic
-      if (!m_device->features().extExtendedDynamicState3.extendedDynamicState3DepthClipEnable) {
-        rsDepthClipInfo.pNext = std::exchange(rsInfo.pNext, &rsDepthClipInfo);
-        rsDepthClipInfo.depthClipEnable = VK_TRUE;
-      }
-    } else {
-      rsInfo.depthClampEnable = VK_FALSE;
+    // Only use the fixed depth clip state if we can't make it dynamic
+    if (!m_device->features().extExtendedDynamicState3.extendedDynamicState3DepthClipEnable) {
+      rsDepthClipInfo.pNext = std::exchange(rsInfo.pNext, &rsDepthClipInfo);
+      rsDepthClipInfo.depthClipEnable = VK_TRUE;
     }
 
     // Only the view mask is used as input, and since we do not use MultiView, it is always 0
@@ -541,10 +537,13 @@ namespace dxvk {
     if (m_device->canUseDescriptorBuffer())
       flagsInfo.flags |= VK_PIPELINE_CREATE_2_DESCRIPTOR_BUFFER_BIT_EXT;
 
-    VkComputePipelineCreateInfo info = { VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO, &flagsInfo };
+    VkComputePipelineCreateInfo info = { VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO };
     info.stage        = *stageInfo.getStageInfos();
     info.layout       = m_layout->getLayout(DxvkPipelineLayoutType::Merged)->getPipelineLayout();
     info.basePipelineIndex = -1;
+
+    if (flagsInfo.flags)
+      flagsInfo.pNext = std::exchange(info.pNext, &flagsInfo);
 
     VkPipeline pipeline = VK_NULL_HANDLE;
     VkResult vr = vk->vkCreateComputePipelines(vk->device(), VK_NULL_HANDLE, 1, &info, nullptr, &pipeline);

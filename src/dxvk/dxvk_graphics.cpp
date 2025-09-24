@@ -566,14 +566,10 @@ namespace dxvk {
       rsInfo.rasterizerDiscardEnable = VK_TRUE;
     }
 
-    // Set up depth clip state. If the extension is not supported,
-    // use depth clamp instead, even though this is not accurate.
-    if (device->features().extDepthClipEnable.depthClipEnable) {
-      rsDepthClipInfo.pNext = std::exchange(rsInfo.pNext, &rsDepthClipInfo);
-      rsDepthClipInfo.depthClipEnable = state.rs.depthClipEnable();
-    } else {
-      rsInfo.depthClampEnable = !state.rs.depthClipEnable();
-    }
+    // Set up depth clip state. Require depth clip support,
+    // this is *not* equivalent to disabling depth clamp.
+    rsDepthClipInfo.pNext = std::exchange(rsInfo.pNext, &rsDepthClipInfo);
+    rsDepthClipInfo.depthClipEnable = state.rs.depthClipEnable();
 
     // Set up conservative rasterization if requested by the application.
     if (state.rs.conservativeMode() != VK_CONSERVATIVE_RASTERIZATION_MODE_DISABLED_EXT) {
@@ -1365,13 +1361,16 @@ namespace dxvk {
     if (m_device->canUseDescriptorBuffer())
       flags.flags |= VK_PIPELINE_CREATE_2_DESCRIPTOR_BUFFER_BIT_EXT;
 
-    VkPipelineLibraryCreateInfoKHR libInfo = { VK_STRUCTURE_TYPE_PIPELINE_LIBRARY_CREATE_INFO_KHR, &flags };
+    VkPipelineLibraryCreateInfoKHR libInfo = { VK_STRUCTURE_TYPE_PIPELINE_LIBRARY_CREATE_INFO_KHR };
     libInfo.libraryCount    = libraries.size();
     libInfo.pLibraries      = libraries.data();
 
     VkGraphicsPipelineCreateInfo info = { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO, &libInfo };
     info.layout             = m_layout.getLayout(DxvkPipelineLayoutType::Independent)->getPipelineLayout();
     info.basePipelineIndex  = -1;
+
+    if (flags.flags)
+      flags.pNext = std::exchange(info.pNext, &flags);
 
     VkPipeline pipeline = VK_NULL_HANDLE;
     VkResult vr = vk->vkCreateGraphicsPipelines(vk->device(), VK_NULL_HANDLE, 1, &info, nullptr, &pipeline);
@@ -1424,7 +1423,7 @@ namespace dxvk {
     if (m_shaders.fs != nullptr)
       stageInfo.addStage(VK_SHADER_STAGE_FRAGMENT_BIT, getShaderCode(*m_shaders.fs, key.shState.fsInfo), &key.scState.scInfo);
 
-    VkPipelineCreateFlags2CreateInfo flags = { VK_STRUCTURE_TYPE_PIPELINE_CREATE_FLAGS_2_CREATE_INFO, &key.foState.rtInfo };
+    VkPipelineCreateFlags2CreateInfo flags = { VK_STRUCTURE_TYPE_PIPELINE_CREATE_FLAGS_2_CREATE_INFO };
 
     if (key.foState.feedbackLoop & VK_IMAGE_ASPECT_COLOR_BIT)
       flags.flags |= VK_PIPELINE_CREATE_2_COLOR_ATTACHMENT_FEEDBACK_LOOP_BIT_EXT;
@@ -1435,7 +1434,7 @@ namespace dxvk {
     if (m_device->canUseDescriptorBuffer())
       flags.flags |= VK_PIPELINE_CREATE_2_DESCRIPTOR_BUFFER_BIT_EXT;
 
-    VkGraphicsPipelineCreateInfo info = { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO, &flags };
+    VkGraphicsPipelineCreateInfo info = { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO, &key.foState.rtInfo };
     info.stageCount               = stageInfo.getStageCount();
     info.pStages                  = stageInfo.getStageInfos();
     info.pVertexInputState        = &key.viState.viInfo;
@@ -1452,6 +1451,9 @@ namespace dxvk {
     
     if (!key.prState.tsInfo.patchControlPoints)
       info.pTessellationState = nullptr;
+
+    if (flags.flags)
+      flags.pNext = std::exchange(info.pNext, &flags);
     
     VkPipeline pipeline = VK_NULL_HANDLE;
     VkResult vr = vk->vkCreateGraphicsPipelines(vk->device(), VK_NULL_HANDLE, 1, &info, nullptr, &pipeline);
