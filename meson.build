@@ -1,4 +1,4 @@
-project('dxvk', ['c', 'cpp'], version : '2.7.1', meson_version : '>= 0.58', default_options : [ 'cpp_std=c++latest', 'b_vscrt=static_from_buildtype', 'warning_level=2' ])
+project('dxvk', ['c', 'cpp'], version : '2.7.1', meson_version : '>= 0.58', default_options : [ 'cpp_std=c++latest', 'b_vscrt=static_from_buildtype', 'warning_level=2','cpp_args=[/GF, /MT, /Gy, /Qpar, /arch:AVX512, /vlen=512]'])
 
 pkg = import('pkgconfig')
 cpu_family = target_machine.cpu_family()
@@ -28,10 +28,10 @@ compiler_args = [
   '-Wno-missing-braces',
   '/GF',
   '/MT',
-	'/Gy',
-	'/Qpar',
-	'/arch:AVX512',
-	'/vlen=512',
+  '/Gy',
+  '/Qpar',
+  '/arch:AVX512',
+  '/vlen=512'
 ]
 
 link_args = []
