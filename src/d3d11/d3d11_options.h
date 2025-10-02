@@ -18,7 +18,7 @@ namespace dxvk {
     /// Workaround for compute shaders that read and
     /// write from the same shared memory location
     /// without explicit synchronization.
-    bool forceVolatileTgsmAccess = false;
+    bool forceComputeLdsBarriers = false;
 
     /// Force UAV synchronization insided compute shaders
     ///
@@ -59,12 +59,6 @@ namespace dxvk {
 
     /// Clamps negative LOD bias
     bool clampNegativeLodBias = false;
-
-    /// Declare vertex positions in shaders as invariant
-    bool invariantPosition = true;
-
-    /// Enable float control bits
-    bool floatControls = true;
 
     /// Override maximum frame latency if the app specifies
     /// a higher value. May help with frame timing issues.
