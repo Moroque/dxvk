@@ -1005,7 +1005,6 @@ namespace dxvk {
     m_vsIn  = m_shaders.vs != nullptr ? m_shaders.vs->metadata().inputs.computeMask() : 0u;
     m_fsOut = m_shaders.fs != nullptr ? m_shaders.fs->metadata().outputs.computeMask() : 0u;
     m_specConstantMask = this->computeSpecConstantMask();
-    gplAsyncCache = m_device->config().gplAsyncCache;
 
     if (m_shaders.gs != nullptr) {
       if (m_shaders.gs->metadata().flags.test(DxvkShaderFlag::HasTransformFeedback)) {
@@ -1066,7 +1065,7 @@ namespace dxvk {
       if (!this->validatePipelineState(state, true))
         return DxvkGraphicsPipelineHandle();
 
-    bool useAsync = m_device->config().enableAsync && async;
+    const bool useAsync = async && m_device->config().enableAsync && env::getEnvVar("DXVK_ASYNC") != "0";
 
     // Prevent other threads from adding new instances and check again
     std::unique_lock<dxvk::mutex> lock(useAsync ? m_asyncMutex : m_mutex);
@@ -1117,7 +1116,7 @@ namespace dxvk {
 
       // Do not compile if this pipeline can be fast linked. This essentially
       // disables the state cache for pipelines that do not benefit from it.
-      if (!gplAsyncCache && !m_async && this->canCreateBasePipeline(state))
+      if(!m_async && this->canCreateBasePipeline(state))
         return;
 
       // Prevent other threads from adding new instances and check again

@@ -555,16 +555,8 @@ namespace dxvk {
      */
     DxvkGraphicsPipelineHandle getPipelineHandle(
       const DxvkGraphicsPipelineStateInfo&    state,
-      bool                              async);
-    
-    void asyncPipeline(const DxvkGraphicsPipelineStateInfo& state);
-    /**
-     * \brief Compiles a pipeline
-     * 
-     * Asynchronously compiles the given pipeline
-     * and stores the result for future use.
-     * \param [in] state Pipeline state vector
-     */
+      bool                                    async);
+
     void compilePipeline(
       const DxvkGraphicsPipelineStateInfo&    state);
 

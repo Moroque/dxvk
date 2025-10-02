@@ -275,30 +275,13 @@ namespace dxvk {
     }
 
     /**
-     * \brief Checks whether this view overlaps with another one
-     *
-     * Two views overlap if they were created for the same
-     * image and have at least one subresource in common.
-     * \param [in] view The other view to check
-     * \returns \c true if the two views overlap
-     */
-    bool checkSubresourceOverlap(const Rc<DxvkImageView>& view) const {
-      if (likely(m_image != view->m_image))
-        return false;
-
-      return vk::checkSubresourceRangeOverlap(
-        this->imageSubresources(),
-        view->imageSubresources());
-    }
-    /**
      * \brief Sets render target usage frame number
      *
      * The image view will track internally when
      * it was last used as a render target. This
      * info is used for async shader compilation.
-     * \param [in] frameId Frame number
-     */
-    void setRtBindingFrameId(uint32_t frameId) {
+     * \param [in] frameId Frame number+     */
+    void setRtBindingFrameId(const uint32_t frameId) {
       if (frameId != m_rtBindingFrameId) {
         if (frameId == m_rtBindingFrameId + 1)
           m_rtBindingFrameCount += 1;
@@ -318,7 +301,24 @@ namespace dxvk {
      * \returns \c true if async compilation is supported
      */
     bool getRtBindingAsyncCompilationCompat() const {
-      return m_rtBindingFrameCount >= 5;
+        return m_rtBindingFrameCount >= 5;
+    }
+
+    /**
+     * \brief Checks whether this view overlaps with another one
+     *
+     * Two views overlap if they were created for the same
+     * image and have at least one subresource in common.
+     * \param [in] view The other view to check
+     * \returns \c true if the two views overlap
+     */
+    bool checkSubresourceOverlap(const Rc<DxvkImageView>& view) const {
+      if (likely(m_image != view->m_image))
+        return false;
+
+      return vk::checkSubresourceRangeOverlap(
+        this->imageSubresources(),
+        view->imageSubresources());
     }
 
     /**
