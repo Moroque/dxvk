@@ -107,10 +107,10 @@ namespace dxvk {
       { "dxgi.hideNvidiaGpu",              "False" },
       { "dxgi.hideIntelGpu",                "True" },
     }} },
-    /* Far Cry 5: Unsynchronized write-after-read *
-     * in some compute shaders cause invisible    *
-     * terrain on some GPUs.                      */
-    { R"(\\FarCry5\.exe$)", {{
+    /* Far Cry 5 and New Dawn: Unsynchronized     *
+     * write-after-read in some compute shaders   *
+     * cause invisible terrain on some GPUs.      */
+    { R"(\\FarCry(5|NewDawn)\.exe$)", {{
       { "d3d11.forceComputeLdsBarriers",    "True" },
     }} },
     /* Frostpunk: Renders one frame with D3D9     *
@@ -1111,6 +1111,11 @@ namespace dxvk {
     { R"(\\Heroes of Annihilated Empires.*\\engine\.exe$)", {{
       { "d3d9.maxFrameRate",                  "60" },
     }} },
+    /* RaceRoom Racing Experience                 *
+     * Game depends on NvAPI_D3D9_StretchRectEx   */
+    { R"(\\RRRE(64)?\.exe$)", {{
+      { "d3d9.hideNvidiaGpu",               "True" },
+    }} },
 
     /**********************************************/
     /* D3D8 GAMES                                 */
@@ -1317,6 +1322,16 @@ namespace dxvk {
      * legacy DISCARD behavior                    */
     { R"(\\TopSpin\.exe$)", {{
       { "d3d8.forceLegacyDiscard",          "True" },
+    }} },
+    /* Lego Racers 2 - Hits an incredible amount  *
+     * of queue syncs with direct buffer mapping  */
+    { R"(\\LEGO Racers 2\.exe$)", {{
+      { "d3d9.allowDirectBufferMapping",   "False" },
+    }} },
+    /* Smash Up Derby - Poor performance on Intel *
+     * due to queue syncs on certain race tracks  */
+    { R"(\\Smash up Derby\\cars\.exe$)", {{
+      { "d3d9.allowDirectBufferMapping",   "False" },
     }} },
   };
 
