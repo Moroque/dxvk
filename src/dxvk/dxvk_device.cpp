@@ -29,7 +29,7 @@ namespace dxvk {
     determineShaderOptions();
 
     if (env::getEnvVar("DXVK_SHADER_CACHE") != "0" && DxvkShader::getShaderDumpPath().empty())
-      m_shaderCache = new DxvkShaderCache(DxvkShaderCache::getDefaultFilePaths());
+      m_shaderCache = DxvkShaderCache::getInstance();
   }
   
   
@@ -660,8 +660,10 @@ namespace dxvk {
   
   DxvkDevicePerfHints DxvkDevice::getPerfHints() {
     DxvkDevicePerfHints hints;
+
+    // RADV properly fuses depth-stencil copies now
     hints.preferFbDepthStencilCopy = m_features.extShaderStencilExport
-      && (m_adapter->matchesDriver(VK_DRIVER_ID_MESA_RADV_KHR)
+      && (m_adapter->matchesDriver(VK_DRIVER_ID_MESA_RADV_KHR, Version(), Version(25, 3, 99))
        || m_adapter->matchesDriver(VK_DRIVER_ID_AMD_OPEN_SOURCE_KHR)
        || m_adapter->matchesDriver(VK_DRIVER_ID_AMD_PROPRIETARY_KHR));
 
@@ -744,8 +746,8 @@ namespace dxvk {
     }
 
     // Converting unsigned integers to float should return an unsigned float,
-    // but Nvidia drivers don't agree
-    if (m_adapter->matchesDriver(VK_DRIVER_ID_NVIDIA_PROPRIETARY))
+    // but Nvidia drivers prior to 580 don't agree
+    if (m_adapter->matchesDriver(VK_DRIVER_ID_NVIDIA_PROPRIETARY, Version(), Version(580u, 0u, 0u)))
       m_shaderOptions.flags.set(DxvkShaderCompileFlag::LowerItoF);
 
     // Forward UBO device limit as-is

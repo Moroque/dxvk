@@ -1,7 +1,6 @@
 #pragma once
 
 #include <array>
-#include <fstream>
 #include <optional>
 #include <string>
 #include <queue>
@@ -11,6 +10,7 @@
 
 #include "../util/thread.h"
 #include "../util/util_env.h"
+#include "../util/util_file.h"
 
 #include "dxvk_shader_ir.h"
 
@@ -35,8 +35,6 @@ namespace dxvk {
       std::string binFile;
     };
 
-    DxvkShaderCache(FilePaths paths);
-
     ~DxvkShaderCache();
 
     void incRef() {
@@ -45,7 +43,7 @@ namespace dxvk {
 
     void decRef() {
       if (m_useCount.fetch_sub(1u, std::memory_order_release) == 1u)
-        delete this;
+        freeInstance();
     }
 
     /**
@@ -74,7 +72,20 @@ namespace dxvk {
      */
     static FilePaths getDefaultFilePaths();
 
+    /**
+     * \brief Initializes shader cache
+     * \returns Shader cache instance
+     */
+    static Rc<DxvkShaderCache> getInstance();
+
   private:
+
+    struct Instance {
+      dxvk::mutex       mutex;
+      DxvkShaderCache*  instance = nullptr;
+    };
+
+    static Instance s_instance;
 
     struct LutHeader {
       std::array<char, 4u>  magic = { };
@@ -109,8 +120,8 @@ namespace dxvk {
     FilePaths                     m_filePaths;
     dxvk::mutex                   m_fileMutex;
 
-    std::fstream                  m_lutFile;
-    std::fstream                  m_binFile;
+    util::File                    m_lutFile;
+    util::File                    m_binFile;
 
     std::atomic<Status>           m_status = { Status::Uninitialized };
 
@@ -121,6 +132,8 @@ namespace dxvk {
     std::queue<Rc<DxvkIrShader>>  m_writeQueue;
 
     dxvk::thread                  m_writer;
+
+    DxvkShaderCache();
 
     bool ensureStatus(Status status);
 
@@ -140,72 +153,76 @@ namespace dxvk {
 
     bool writeShaderToCache(DxvkIrShader& shader);
 
-    bool readShaderLutEntry(LutKey& key, LutEntry& entry);
+    bool readShaderLutEntry(LutKey& key, LutEntry& entry, size_t& offset);
 
     void runWriter();
 
-    static bool writeShaderXfbInfo(std::ostream& stream, const dxbc_spv::ir::IoXfbInfo& xfb);
+    void freeInstance();
 
-    static bool writeShaderCreateInfo(std::ostream& stream, const DxvkIrShaderCreateInfo& createInfo);
+    static bool writeShaderXfbInfo(util::File& stream, const dxbc_spv::ir::IoXfbInfo& xfb);
 
-    static bool writeShaderLayout(std::ostream& stream, const DxvkPipelineLayoutBuilder& layout);
+    static bool writeShaderCreateInfo(util::File& stream, const DxvkIrShaderCreateInfo& createInfo);
 
-    static bool writeShaderIo(std::ostream& stream, const DxvkShaderIo& io);
+    static bool writeShaderLayout(util::File& stream, const DxvkPipelineLayoutBuilder& layout);
 
-    static bool writeShaderMetadata(std::ostream& stream, const DxvkShaderMetadata& metadata);
+    static bool writeShaderIo(util::File& stream, const DxvkShaderIo& io);
 
-    static std::optional<LutEntry> writeShaderBinary(std::ostream& stream, DxvkIrShader& shader);
+    static bool writeShaderMetadata(util::File& stream, const DxvkShaderMetadata& metadata);
 
-    static bool writeHeader(std::ostream& stream, const LutHeader& header);
+    static std::optional<LutEntry> writeShaderBinary(util::File& stream, DxvkIrShader& shader);
 
-    static bool readShaderIo(std::istream& stream, DxvkShaderIo& io);
+    static bool writeHeader(util::File& stream, const LutHeader& header);
 
-    static bool readShaderXfbInfo(std::istream& stream, dxbc_spv::ir::IoXfbInfo& xfb);
+    static bool readShaderIo(util::File& stream, size_t& offset, DxvkShaderIo& io);
 
-    static bool readShaderLutKey(std::istream& stream, LutKey& key);
+    static bool readShaderXfbInfo(util::File& stream, size_t& offset, dxbc_spv::ir::IoXfbInfo& xfb);
 
-    static bool readShaderMetadata(std::istream& stream, DxvkShaderMetadata& metadata);
+    static bool readShaderLutKey(util::File& stream, size_t& offset, LutKey& key);
 
-    static bool readShaderLayout(std::istream& stream, DxvkPipelineLayoutBuilder& layout);
+    static bool readShaderMetadata(util::File& stream, size_t& offset, DxvkShaderMetadata& metadata);
 
-    static bool writeBytes(std::ostream& stream, const char* data, size_t size) {
-      return bool(stream.write(data, size));
+    static bool readShaderLayout(util::File& stream, size_t& offset, DxvkPipelineLayoutBuilder& layout);
+
+    static bool writeBytes(util::File& stream, const char* data, size_t size) {
+      return stream.append(size, data);
     }
 
-    static bool writeBytes(std::ostream& stream, const uint8_t* data, size_t size) {
+    static bool writeBytes(util::File& stream, const uint8_t* data, size_t size) {
       return writeBytes(stream, reinterpret_cast<const char*>(data), size);
     }
 
-    static bool writeString(std::ostream& stream, const std::string& string) {
+    static bool writeString(util::File& stream, const std::string& string) {
       return write(stream, uint16_t(string.size())) && writeBytes(stream, string.data(), string.size());
     }
 
     template<typename T, std::enable_if_t<std::is_trivially_copyable_v<T>, bool> = true>
-    static bool write(std::ostream& stream, const T& data) {
+    static bool write(util::File& stream, const T& data) {
       return writeBytes(stream, reinterpret_cast<const char*>(&data), sizeof(data));
     }
 
-    static bool readBytes(std::istream& stream, char* data, size_t size) {
-      return bool(stream.read(data, size));
+    static bool readBytes(util::File& stream, char* data, size_t& offset, size_t size) {
+      bool result = stream.read(offset, size, data);
+      offset += size;
+      return result;
     }
 
-    static bool readBytes(std::istream& stream, uint8_t* data, size_t size) {
-      return readBytes(stream, reinterpret_cast<char*>(data), size);
+    static bool readBytes(util::File& stream, uint8_t* data, size_t& offset, size_t size) {
+      return readBytes(stream, reinterpret_cast<char*>(data), offset, size);
     }
 
-    static bool readString(std::istream& stream, std::string& string) {
+    static bool readString(util::File& stream, size_t& offset, std::string& string) {
       uint16_t len = 0u;
 
-      if (!read(stream, len))
+      if (!read(stream, offset, len))
         return false;
 
       string.resize(len);
-      return readBytes(stream, string.data(), len);
+      return readBytes(stream, string.data(), offset, len);
     }
 
     template<typename T, std::enable_if_t<std::is_trivially_copyable_v<T>, bool> = true>
-    static bool read(std::istream& stream, T& data) {
-      return readBytes(stream, reinterpret_cast<char*>(&data), sizeof(data));
+    static bool read(util::File& stream, size_t& offset, T& data) {
+      return readBytes(stream, reinterpret_cast<char*>(&data), offset, sizeof(data));
     }
 
   };

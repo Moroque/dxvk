@@ -324,6 +324,8 @@ namespace dxvk {
     alignas(CACHE_LINE_SIZE)
     FpsLimiter                  m_fpsLimiter;
 
+    bool                        m_hasGamescopeFenceSignalBug = false;
+
     static const std::array<std::pair<VkColorSpaceKHR, VkColorSpaceKHR>, 2> s_colorSpaceFallbacks;
 
     void updateSwapChain();

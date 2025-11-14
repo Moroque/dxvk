@@ -118,6 +118,7 @@ if platform == 'windows'
   lib_d3d9    = cpp.find_library('d3d9')
   lib_d3d11   = cpp.find_library('d3d11')
   lib_dxgi    = cpp.find_library('dxgi')
+  lib_gdi32   = cpp.find_library('gdi32')
 
   if dxvk_is_msvc
     res_ext = '.res'
@@ -206,6 +207,9 @@ glsl_args = [
   '@INPUT@',
   '-o', '@OUTPUT@',
 ]
+if get_option('debug')
+  glsl_args += ['-gVS']
+endif
 glsl_generator = generator(
   glsl_compiler,
   output    : [ '@BASENAME@.h' ],

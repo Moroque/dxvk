@@ -2,8 +2,6 @@
 
 #include <mutex>
 
-#include "../util/sync/sync_list.h"
-
 #include "dxvk_bind_mask.h"
 #include "dxvk_constant_state.h"
 #include "dxvk_graphics_state.h"
@@ -363,17 +361,14 @@ namespace dxvk {
   struct DxvkGraphicsPipelineInstance {
     DxvkGraphicsPipelineInstance() { }
     DxvkGraphicsPipelineInstance(
-      const DxvkGraphicsPipelineStateInfo&  state_,
             VkPipeline                      baseHandle_,
             VkPipeline                      fastHandle_,
             DxvkAttachmentMask              attachments_)
-    : state       (state_),
-      baseHandle  (baseHandle_),
+    : baseHandle  (baseHandle_),
       fastHandle  (fastHandle_),
       isCompiling (fastHandle_ != VK_NULL_HANDLE),
       attachments (attachments_) { }
 
-    DxvkGraphicsPipelineStateInfo state;
     std::atomic<VkPipeline>       baseHandle  = { VK_NULL_HANDLE };
     std::atomic<VkPipeline>       fastHandle  = { VK_NULL_HANDLE };
     std::atomic<VkBool32>         isCompiling = { VK_FALSE };
@@ -612,11 +607,9 @@ namespace dxvk {
 
     alignas(CACHE_LINE_SIZE)
     dxvk::mutex                                   m_mutex;
-    alignas(CACHE_LINE_SIZE)
-    dxvk::mutex                                   m_asyncMutex;
-    bool                                          m_async = false;
-    bool                                          gplAsyncCache;
-    sync::List<DxvkGraphicsPipelineInstance>      m_pipelines;
+    DxvkPipelineVariantTable<
+      DxvkGraphicsPipelineStateInfo,
+      DxvkGraphicsPipelineInstance>               m_pipelines;
     uint32_t                                      m_useCount = 0;
 
     std::unordered_map<

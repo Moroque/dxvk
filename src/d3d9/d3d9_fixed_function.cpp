@@ -1471,7 +1471,11 @@ namespace dxvk {
         m_module.constvec4f32(1.0f, 1.0f, 1.0f, 1.0f));
 
       m_module.opStore(m_vs.out.COLOR[0], finalColor0);
-      m_module.opStore(m_vs.out.COLOR[1], finalColor1);
+      m_module.opStore(m_vs.out.COLOR[1],
+        m_vsKey.Data.Contents.SpecularEnabled
+        ? finalColor1
+        : m_vs.in.COLOR[1]
+      );
     }
     else {
       m_module.opStore(m_vs.out.COLOR[0], m_vs.in.COLOR[0]);
@@ -1822,7 +1826,8 @@ namespace dxvk {
     if (m_vsKey.Data.Contents.VertexHasColor1)
       m_vs.in.COLOR[1] = declareIO(true, DxsoSemantic{ DxsoUsage::Color, 1 });
     else {
-      m_vs.in.COLOR[1] = m_module.constvec4f32(0.0f, 0.0f, 0.0f, 0.0f);
+      // TODO: SM3 behavior
+      m_vs.in.COLOR[1] = m_module.constvec4f32(0.0f, 0.0f, 0.0f, 1.0f);
       m_isgn.elemCount++;
     }
 
@@ -2126,9 +2131,7 @@ namespace dxvk {
             reg = diffuse;
             break;
           case D3DTA_SPECULAR:
-            // Specular highlights shouldn't be calculated at all if D3DRS_SPECULARENABLE
-            // is set to FALSE, so return vec4(0.0) to ensure correctness during texture blending.
-            reg = m_fsKey.Stages[0].Contents.GlobalSpecularEnable ? specular : m_module.constvec4f32(0.0f, 0.0f, 0.0f, 0.0f);
+            reg = specular;
             break;
           case D3DTA_TEMP:
             reg = temp;

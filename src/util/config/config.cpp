@@ -1116,6 +1116,21 @@ namespace dxvk {
     { R"(\\RRRE(64)?\.exe$)", {{
       { "d3d9.hideNvidiaGpu",               "True" },
     }} },
+    /* Blitzkrieg 2 - Startup crash               */
+    { R"(\\Blitzkrieg 2( - Fall of the Reich| - Liberation)?\\bin\\game\.exe$)", {{
+      { "d3d9.memoryTrackTest",             "True" },
+    }} },
+    /* Core Awaken series (Jilelen and LittleSnow/The Yuka) & *
+     * Mine Dungeon 2 ~Rurumu's trip~                         *
+     * Freezes on boot                                        */
+    { R"(\\(BioDungeon|BioLab2|MineDungeon2)\.exe$)", {{
+      { "d3d9.countLosableResources",      "False" },
+    }} },
+    /* Ridge Racer Unbounded - Vertex explosions  */
+    { R"(\\RRU(_demo)?\.exe$)", {{
+      { "dxvk.zeroMappedMemory",            "True" },
+    }} },
+
 
     /**********************************************/
     /* D3D8 GAMES                                 */
@@ -1252,11 +1267,17 @@ namespace dxvk {
     { R"(\\fifa2003(demo)?\.exe$)", {{
       { "d3d9.cachedDynamicBuffers",        "True" },
     }} },
-    /* Splinter Cell: Pandora Tomorrow            *
-     * Broken inputs and physics above 60 FPS     */
-    { R"(\\SplinterCell2\.exe$)", {{
+    /* Splinter Cell: Pandora Tomorrow (Retail)   *
+     * Missing shadows without dref scaling and   *
+     * broken inputs and physics above 60 FPS     */
+    { R"(\\offline\\system\\SplinterCell2\.exe$)", {{
       { "d3d9.maxFrameRate",                  "60" },
       { "d3d8.scaleDref",                     "24" },
+    }} },
+    /* Splinter Cell: Pandora Tomorrow (Steam)    *
+     * Broken inputs and physics above 60 FPS     */
+    { R"(\\Splinter Cell Pandora Tomorrow\\system\\SplinterCell2\.exe$)", {{
+      { "d3d9.maxFrameRate",                  "60" },
     }} },
     /* Chrome: Gold Edition                       *
      * Broken character model motion at high FPS  */
